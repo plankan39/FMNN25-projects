@@ -126,6 +126,7 @@ class Network:
     def optimizeSGD(
         self,
         data: Sequence[tuple[ArrayLike, ArrayLike]],
+        testData: Sequence[tuple[ArrayLike, ArrayLike]],
         epochs: int,
         mBatchSize: int,
         lRate: float,
@@ -136,6 +137,8 @@ class Network:
         Parameters
         ----------
             data: Sequence[tuple[ArrayLike, ArrayLike]] - The training data
+
+            testData: Sequence[tuple[ArrayLike, ArrayLike]] - The the testing dat validated on
 
             epochs: int - the number of epochs to run
 
@@ -168,7 +171,7 @@ class Network:
                 ]
                 # update the weights and biases
 
-            loss, accuracy = self.evaluateModel(data)
+            loss, accuracy = self.evaluateModel(testData)
             # Evaluate the model
             print(
                 f"######################### epoch {epoch + 1} ############################"
@@ -222,7 +225,7 @@ class Network:
             X: ArrayLike - A Sample input
 
             y: ArrayLike - The desired output
-        
+
         Returns
         -------
             The partial derivatives of the weights and of the biases of the network
@@ -237,7 +240,7 @@ class Network:
         # partial derivative of weights d(CostFunction)/d(weights)
 
         for i in range(2, self.nLayers):
-            # Back propagating through all other layers finding the partial 
+            # Back propagating through all other layers finding the partial
             # derivatives given the partial derivatives of output layer.
             d = db[0].dot(self.weights[-i + 1].T) * self.activationPrime(z[-i])
             ddw = np.array([layerOutputs[-i - 1]]).T.dot(d)
@@ -281,4 +284,9 @@ if __name__ == "__main__":
     sizes = (784, 30, 10)
     n = Network(sizes, sigmoid, sigmoidDerivative, quadraticLoss, quadraticDerivative)
     trainingData, validationData, testData = loadMNIST()
-    n.optimizeSGD(trainingData, 10, 32, 3)
+
+    epochs = 10
+    miniBatchSize = 32
+    learningRate = 3
+
+    n.optimizeSGD(trainingData, testData, epochs, miniBatchSize, learningRate)

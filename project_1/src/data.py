@@ -111,5 +111,6 @@ def oneHotEncode(y: ArrayLike, classesSize: int) -> ArrayLike:
         An array with the one hot encoded values of y
     """
     oneHot = np.zeros((y.shape[0], classesSize))
+
     oneHot[np.arange(y.shape[0]), y] = 1
     return oneHot
