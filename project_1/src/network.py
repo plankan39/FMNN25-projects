@@ -12,9 +12,10 @@ from typing import Sequence
 
 import numpy as np
 from activation import ActivationFunction, sigmoid, sigmoidDerivative
-from cost import CostFunction, quadraticDerivative, quadraticLoss
+from loss import LossFunction, quadraticDerivative, quadraticLoss
 from data import getMiniBatches, loadMNIST
 from numpy.typing import ArrayLike
+import time
 
 
 class Network:
@@ -30,15 +31,15 @@ class Network:
         sizes: tuple[int],
         activationFunction: ActivationFunction,
         activationPrime: ActivationFunction,
-        costFunction: CostFunction,
-        costPrime: CostFunction
+        lossFunction: LossFunction,
+        lossPrime: LossFunction
     )
         Initializes the network with the number of neurons in each layers corresponding
         to the elements in sizes.
 
     Methods
     -------
-    forward(self, X: ArrayLike) -> tuple[float]
+    forward(self, X: ArrayLike) -> np.ndarray
         Forwards input X through the network and returns the output of the network
 
     optimizeSGD(
@@ -57,7 +58,6 @@ class Network:
     Properties
     ----------
     sizes - the sizes of the layers in the network
-
     nLayers - the number of layers in the network
 
     """
@@ -67,8 +67,8 @@ class Network:
         sizes: tuple[int],
         activationFunction: ActivationFunction,
         activationPrime: ActivationFunction,
-        costFunction: CostFunction,
-        costPrime: CostFunction,
+        lossFunction: LossFunction,
+        lossPrime: LossFunction,
     ) -> None:
         """
         Initializes the network with weights and biases.
@@ -77,13 +77,17 @@ class Network:
 
         Parameters
         ----------
-            sizes: Sequence[int] - A sequence where each element represents the
-            number of neurons in a layer.
-
-            activationFunction: ActivationFunction - The activation function
-            used in the network.
-
-            activationDerivative
+            sizes: Sequence[int]
+                A sequence where each element represents the
+                number of neurons in a layer.
+            activationFunction: ActivationFunction
+                The activation function used in the network.
+            activationPrime: ActivationFunction
+                The derivative of the activation function
+            lossFunction: LossFunction
+                The loss function used for optimizing
+            lossPrime: LossFunction
+                The derivative of the loss function
         """
         inputSizes = sizes[:-1]
         outputSizes = sizes[1:]
@@ -95,10 +99,10 @@ class Network:
 
         self.biases = tuple(np.random.randn(1, out) for out in outputSizes)
         """
-        Tuple where each element represent the biases of a layer in the network. 
-        
+        Tuple with biases for the layers in the network.
+
         The biases are an array where each element represents the bias of
-        a node in a layer
+        a node in that layer
         """
 
         self.activation = activationFunction
@@ -107,10 +111,10 @@ class Network:
         self.activationPrime = activationPrime
         """The derivative of the activation function"""
 
-        self.cost = costFunction
+        self.loss = lossFunction
         """The cost function used in optimizing the network"""
 
-        self.costPrime = costPrime
+        self.lossPrime = lossPrime
         """The derivative of the cost function used"""
 
     @property
@@ -136,17 +140,19 @@ class Network:
 
         Parameters
         ----------
-            data: Sequence[tuple[ArrayLike, ArrayLike]] - The training data
-
-            testData: Sequence[tuple[ArrayLike, ArrayLike]] - The the testing dat validated on
-
-            epochs: int - the number of epochs to run
-
-            mBatchSize: int - the size of each mini batch
-
-            lRate: float - the learning rate used in SGD
+            data: Sequence[tuple[ArrayLike, ArrayLike]]
+                The training data
+            testData: Sequence[tuple[ArrayLike, ArrayLike]]
+                The the testing dat validated on
+            epochs: int
+                the number of epochs to run
+            mBatchSize: int
+                the size of each mini batch
+            lRate: float
+                the learning rate used in SGD
         """
         for epoch in range(epochs):
+            startTime = time.time()
             miniBatches = getMiniBatches(data[0], data[1], mBatchSize)
             for X, y in miniBatches:
                 dwAvg = [np.zeros(w.shape) for w in self.weights]
@@ -176,10 +182,11 @@ class Network:
             print(
                 f"######################### epoch {epoch + 1} ############################"
             )
-            print(f"Loss: {loss}")
-            print(f"Accuracy: {accuracy}")
+            print(f"{time.time() - startTime} s")
+            print(f"Loss: {round(loss, 4)}")
+            print(f"Accuracy: {round(accuracy * 100, 4)}%")
 
-    def forward(self, X: ArrayLike) -> tuple[float]:
+    def forward(self, X: ArrayLike) -> np.ndarray:
         """Feeds input X through the network returning the output of the network.
 
         Parameters
@@ -208,10 +215,11 @@ class Network:
         layerOutputs = [X]
         # output of each layer
         z = []
-        # weighted outputs without activation
+        # weighted outputs without activation function
         for weightsLayer, biasesLayer in zip(self.weights, self.biases):
-            z.append(layerOutputs[-1].dot(weightsLayer) + biasesLayer)
-            layerOutputs.append(self.activation(z[-1]))
+            zz = layerOutputs[-1].dot(weightsLayer) + biasesLayer
+            z.append(zz)
+            layerOutputs.append(self.activation(zz))
 
         return tuple(layerOutputs), tuple(z)
 
@@ -223,8 +231,7 @@ class Network:
         Parameters
         ----------
             X: ArrayLike - A Sample input
-
-            y: ArrayLike - The desired output
+            y: ArrayLike - The desired output/label
 
         Returns
         -------
@@ -233,10 +240,12 @@ class Network:
         assert np.array(X).ndim == 1 and np.array(y).ndim == 1
         layerOutputs, z = self.__forward(X)
 
-        db = [self.costPrime(layerOutputs[-1], y) * self.activationPrime(z[-1])]
+        db: list[np.ndarray] = [
+            self.lossPrime(layerOutputs[-1], y) * self.activationPrime(z[-1])
+        ]
         # partial derivative of biases d(CostFunction)/d(biases)
 
-        dw = [layerOutputs[-2].T.dot(db[-1])]
+        dw: list[np.ndarray] = [layerOutputs[-2].T.dot(db[-1])]
         # partial derivative of weights d(CostFunction)/d(weights)
 
         for i in range(2, self.nLayers):
@@ -268,7 +277,7 @@ class Network:
         y = testData[1]
         result = self.forward(X)
 
-        loss = np.mean(self.cost(result, y))
+        loss = np.mean(self.loss(result, y))
 
         resultMax = np.argmax(result, axis=1)
         yMax = np.argmax(y, axis=1)
@@ -283,10 +292,14 @@ class Network:
 if __name__ == "__main__":
     sizes = (784, 30, 10)
     n = Network(sizes, sigmoid, sigmoidDerivative, quadraticLoss, quadraticDerivative)
+    # Create a network with 3 layers with the sigmoid function as the activation function
+    # and quadratic loss as the loss function
+
     trainingData, validationData, testData = loadMNIST()
+    # loading the dataset
 
     epochs = 10
     miniBatchSize = 32
-    learningRate = 3
-
+    learningRate = 3.0
     n.optimizeSGD(trainingData, testData, epochs, miniBatchSize, learningRate)
+    # optimize the network

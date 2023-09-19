@@ -9,12 +9,10 @@ CostFunction
     type used for cost functions. 
     Alias of callable[[ArrayLike, ArrayLike], ArrayLike]
 
-
 Functions
 ---------
 quadraticLoss(a: ArrayLike, y: ArrayLike) -> ArrayLike
     calculates quadratic loss
-
 
 quadraticDerivative(a: ArrayLike, y:ArrayLike) -> ArrayLike
     The derivative of quadraticLoss
@@ -25,7 +23,7 @@ from typing import Callable
 import numpy as np
 from numpy.typing import ArrayLike
 
-CostFunction = Callable[[ArrayLike, ArrayLike], ArrayLike]
+LossFunction = Callable[[ArrayLike, ArrayLike], ArrayLike]
 """
 A type alias for cost function.
 Alias of callable[[ArrayLike, ArrayLike], ArrayLike]
@@ -39,7 +37,6 @@ def quadraticLoss(a: ArrayLike, y: ArrayLike) -> ArrayLike:
     Parameters
     ----------
         a: ArrayLike - The output of the neural network
-
         y: ArrayLike - The desired output
 
     Returns
@@ -52,16 +49,13 @@ def quadraticLoss(a: ArrayLike, y: ArrayLike) -> ArrayLike:
 def quadraticDerivative(a: ArrayLike, y: ArrayLike) -> ArrayLike:
     """
     Derivative of quadraticLoss()
-
     d(quadraticLoss)/d(a) = a - y
-
 
     Parameters
     ----------
         a: ArrayLike - output
-
         y: ArrayLike - desired output
-
+    
     Returns
     -------
         An array with the quadratic derivative applied to it.

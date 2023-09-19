@@ -3,7 +3,6 @@ activation
 ----------
 A module containing activation functions.
 
-
 Types
 -----
 ActivationFunction - Alias for Callable[[ArrayLike], ArrayLike]

@@ -34,7 +34,7 @@ def loadMNIST(
 ) -> tuple[tuple[np.ndarray, np.ndarray]]:
     """
     Loads the MNIST dataset from a pickle file and converts it into numpy.ndarray.
-    Converts the wished output to onehot encoding
+    Converts the wished output to oneHot encoding
     Returns a tuple containing training data, validation data and testing data.
 
     It has the form:
@@ -75,9 +75,7 @@ def getMiniBatches(
     Parameters
     ----------
         X: Sequence[ArrayLike] - The input part of the dataset
-
-        y: Sequence[ArrayLike] - The output part of the dataset
-
+        y: Sequence[ArrayLike] - The output labels part of the dataset
         miniBatchSize: int - The size of each mini batch of the dataset
 
     Returns
@@ -85,13 +83,13 @@ def getMiniBatches(
         A list of mini batches of the dataset.
     """
 
-    indices = np.arange(len(X))
-    indices = np.random.shuffle(indices)
-
+    indices = np.arange(X.shape[0])
+    np.random.shuffle(indices)
+    
     XRand, yRand = (X[indices], y[indices])
 
     return [
-        tuple((X[i : i + miniBatchSize], y[i : i + miniBatchSize]))
+        tuple((XRand[i : i + miniBatchSize], yRand[i : i + miniBatchSize]))
         for i in range(0, len(X), miniBatchSize)
     ]
 
@@ -103,7 +101,6 @@ def oneHotEncode(y: ArrayLike, classesSize: int) -> ArrayLike:
     Parameters
     ----------
         y: ArrayLike - A 1d Array
-
         classesSize: int - The size of the classes y can take
 
     Returns
