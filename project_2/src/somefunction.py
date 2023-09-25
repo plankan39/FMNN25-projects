@@ -1,12 +1,15 @@
 import numpy as np
 def newton(f,point,epsilon,max_iter):
     i = 0
-    next_point = point - np.dot(HESSIAN,GRADIENT)
+    next_point = point - np.dot(np.linalg.inv(HESSIAN) ,GRADIENT)
     while  np.linalg.norm(point - next_point) >  epsilon and i < max_iter:
         
         i += 1
         next_point = point - np.dot(HESSIAN,GRADIENT)
+    return next_point
 
+
+<<<<<<< HEAD
 def calculate_gradient(f, p, epsilon=0.01):
     p = np.array(p)
     gradient = np.zeros_like(p)
@@ -30,3 +33,9 @@ def func(x,y):
 
 p = np.array([1,2], dtype=float)
 print(calculate_gradient(func, p, epsilon=0.1))
+=======
+def calculate_gradient(f, p, epsilon=1e-5):
+    p = np.array(p)
+    gradient = (f(p + epsilon) - f(p)) / epsilon
+    return gradient
+>>>>>>> 12056a2e15f2f70328b08399bcf61162cc5edd0e
