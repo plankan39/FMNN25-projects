@@ -3,6 +3,8 @@ from scipy import optimize
 
 
 class f_quadratic:
+    # defines a quadratic of the form
+    # f(x) = 1/2 * xT*Q*x + qTx
     def __init__(self, Q, q, n):
         self.n = n
         assert (Q.shape == (n, n))
@@ -14,10 +16,10 @@ class f_quadratic:
 
     def eval(self, x):
         assert (x.shape == (self.n,))
-        return x.T @ self.Q @ x + self.qT @ x
+        return 1/2 * x.T @ self.Q @ x + self.qT @ x
 
     def analytic_minimizer(self):
-        return -1/2 * self.Qinv @ self.q
+        return self.Qinv @ self.q
 
     def analytic_minimum(self):
         x_min = self.analytic_minimizer()
@@ -59,8 +61,60 @@ def TEST_quadratic_minimum():
     x_analytic = f.analytic_minimizer()
     print(x_analytic)
     print(x_scipy)
-    print(np.linalg.norm(x_scipy - x_analytic))
+    print("diff between analytic solution and scipys bfgs solver solution",
+          np.linalg.norm(x_scipy - x_analytic))
+
+
+def finite_difference_gradient(x, f, h):
+    """
+    approximates the Hessian of f at x using finite differences
+    """
+    ...
+
+
+def finite_difference_hessian(x, f, h):
+    # based on formulas from (Abramowitz and Stegun 1972) in
+    # https://www.sfu.ca/sasdoc/sashtml/iml/chap11/sect8.htm
+    """
+    approximates the Hessian of f at x using finite differences
+    """
+    n = x.shape[0]
+
+    hessian = np.zeros((n, n))
+
+    E = np.eye(n)
+    hi = h
+    hj = h
+    for i in range(n):
+        ei = E[:, i]
+        # since the hessian is symetric we only evaluate upper triangle
+        for j in range(i, n):
+            if i == j:
+                f1 = f(x + 2 * hi * ei)
+                f2 = f(x + hi * ei)
+                f3 = f(x)
+                f4 = f(x - hi * ei)
+                f5 = f(x - 2 * hi * ei)
+                df = (-f1 + 16*f2 - 30*f3 + 16*f4 - f5) / (12 * hi * hi)
+            else:
+                ej = E[:, j]
+                f1 = f(x + hi * ei + hj * ej)
+                f2 = f(x + hi * ei - hj * ej)
+                f3 = f(x - hi * ei + hj * ej)
+                f4 = f(x - hi * ei - hj * ej)
+                df = (f1 - f2 - f3 + f4) / (4 * hi * hj)
+            hessian[i, j] = df
+    return hessian
 
 
 if __name__ == "__main__":
-    TEST_quadratic_minimum()
+    # TEST_quadratic_minimum()
+    n = 3
+    (Q, q) = positive_definite_quadratic_data(n)
+    f = f_quadratic(Q, q, n)
+    x = np.random.rand(n)
+
+    h = 0.1
+    G = finite_difference_hessian(x, f.eval, h)
+    print(G - G.T)
+    print(np.linalg.norm(Q - G, ord=2))
