@@ -22,7 +22,7 @@ class f_quadratic:
         self.Qinv = np.linalg.inv(Q)
 
     def eval(self, x):
-        assert (x.shape == (self.n,))
+        # assert (x.shape == (self.n,))
         return 1/2 * x.T @ self.Q @ x + self.qT @ x
 
     def analytic_minimizer(self):
@@ -31,6 +31,10 @@ class f_quadratic:
     def analytic_minimum(self):
         x_min = self.analytic_minimizer()
         return self.eval(x_min)
+
+
+def rosenbrock(x):
+    return 100 * (x[1]-x[0] ** 2) ** 2 + (1 - x[0])**2
 
 
 def positive_definite_quadratic_data(n, seed=True):
@@ -104,6 +108,18 @@ def TEST_classical_newton():
     print(f"f_min:        {f_min}")
     print(f"f_min_approx: {f_min_approx }")
     print(f"L2(x-x_approx1): {np.linalg.norm(x_min - x_min_approx)}")
+
+
+def TEST_rosenbrock():
+    worst = 0
+    for _ in range(10000):
+        x = np.random.rand(2)
+        r1 = optimize.rosen(x)
+        r2 = rosenbrock(x)
+        res = np.linalg.norm(r1-r2)
+        worst = max(worst, res)
+
+    print("worst", res)
 
 
 def finite_difference_gradient_alt(f, p, epsilon=0.01):
@@ -297,21 +313,32 @@ if __name__ == "__main__":
     # TEST_quadratic_minimum()
     # TEST_hessian_on_quadratic()
     # TEST_classical_newton()
+    # TEST_rosenbrock()
+    # TODO: implement test newton with exact line search
 
-    n = 10
-    (Q, q) = positive_definite_quadratic_data(n)
-    quadratic = f_quadratic(Q, q, n)
-    def f(x): return quadratic.eval(x)
-    x0 = np.random.rand(n)
+    # n = 10
+    # (Q, q) = positive_definite_quadratic_data(n)
+    # quadratic = f_quadratic(Q, q, n)
+    # def f(x): return quadratic.eval(x)
+    # x0 = np.random.rand(n)
+    # f_min = quadratic.analytic_minimum()
+    # x_min = quadratic.analytic_minimizer()
+    # f_min_approx = f_list[-1]
+    # x_min_approx = x_list[-1]
+
+    # print(f"f_min:        {f_min}")
+    # print(f"f_min_approx: {f_list[-1]}")
+    # print(f"L2(x-x_approx1): {np.linalg.norm(x_min - x_min_approx)}")
+
+    def f(x): return rosenbrock(x)
+    x0 = np.random.rand(2)
 
     x_list, f_list = minimize_newton_exact_line_search(
         f, x0, epsilon=1e-6, max_iter=10)
 
-    f_min = quadratic.analytic_minimum()
-    x_min = quadratic.analytic_minimizer()
     f_min_approx = f_list[-1]
     x_min_approx = x_list[-1]
 
-    print(f"f_min:        {f_min}")
     print(f"f_min_approx: {f_list[-1]}")
-    print(f"L2(x-x_approx1): {np.linalg.norm(x_min - x_min_approx)}")
+    print(x_min_approx)
+    # print(f"L2(x-x_approx1): {np.linalg.norm(x_min - x_min_approx)}")
