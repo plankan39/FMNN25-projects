@@ -67,8 +67,8 @@ def TEST_quadratic_minimum():
 
 def TEST_hessian_on_quadratic():
     " quick test on quadratic function to see if Hessian estimation is accurate"
-    n = 50
-    (Q, q) = positive_definite_quadratic_data(n)
+    n = 10
+    (Q, q) = positive_definite_quadratic_data(n, seed=False)
     f = f_quadratic(Q, q, n)
     x = np.random.rand(n)
 
@@ -99,10 +99,13 @@ def finite_difference_gradient(f, p, epsilon=0.01):
     return gradient
 
 
-def finite_difference_hessian(x, f, h):
-    # based on formulas from (Abramowitz and Stegun 1972) in
-    # https://www.sfu.ca/sasdoc/sashtml/iml/chap11/sect8.htm
+def finite_difference_hessian(x, f, h=0.1):
     """
+    h=0.1 actually appears to give better approximations than smaller h
+    when tested on quadratics
+    based on formulas from (Abramowitz and Stegun 1972) in
+    https://www.sfu.ca/sasdoc/sashtml/iml/chap11/sect8.htm
+
     approximates the Hessian of f at x using finite differences
     """
     n = x.shape[0]
@@ -136,13 +139,52 @@ def finite_difference_hessian(x, f, h):
     return hessian
 
 
+def stop_criterion_residual_fulfilled(fk, epsilon):
+    """
+    fk: f(x_k)
+    """
+    return np.linalg.norm(fk) < epsilon
+
+
+def stop_criterion_cauchy_fulfilled(x_k_1, x_k, epsilon):
+    return np.linalg.norm(x_k_1 - x_k) < epsilon
+
+
+def minimize_classical_newton(f, x0, epsilon, max_iter):
+    x_list = [x0]
+    f_list = [f(x0)]
+    x_new = x0
+    for i in range(max_iter):
+        x = x_new
+        Ginv = np.linalg.inv(finite_difference_hessian(x, f, h=0.1))
+        s = -Ginv @ x
+        x_new = x + s
+        f_new = f(x_new)
+
+        x_list.append(x_new)
+        f_list.append(f_new)
+
+        stop = stop_criterion_residual_fulfilled(
+            f_new, epsilon) or stop_criterion_cauchy_fulfilled(x_new, x, epsilon)
+
+        if stop:
+            break
+        # x_new = HESSIAN, GRADIENT)
+    return x_list, f_list
+
+
 if __name__ == "__main__":
     # TEST_quadratic_minimum()
-    TEST_hessian_on_quadratic()
-    exit()
+    # TEST_hessian_on_quadratic()
+
     n = 3
     (Q, q) = positive_definite_quadratic_data(n)
-    f = f_quadratic(Q, q, n)
-    x = np.random.rand(n)
+    quadratic = f_quadratic(Q, q, n)
+    def f(x): return quadratic.eval(x)
+    x0 = np.random.rand(n)
 
-    print(np.linalg.norm(Q - G, ord=2))
+    x_list, f_list = minimize_classical_newton(
+        f, x0, epsilon=1e-6, max_iter=10)
+
+    print(f_list)
+    print(len(x_list))
