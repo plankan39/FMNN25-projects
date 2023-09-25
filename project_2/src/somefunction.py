@@ -1,7 +1,7 @@
 import numpy as np
 def newton(f,point,epsilon,max_iter):
     i = 0
-    next_point = point - np.dot(HESSIAN,GRADIENT)
+    next_point = point - np.dot(np.linalg.inv(HESSIAN) ,GRADIENT)
     while  np.linalg.norm(point - next_point) >  epsilon and i < max_iter:
         
         i += 1
