@@ -65,11 +65,38 @@ def TEST_quadratic_minimum():
           np.linalg.norm(x_scipy - x_analytic))
 
 
-def finite_difference_gradient(x, f, h):
-    """
-    approximates the Hessian of f at x using finite differences
-    """
-    ...
+def TEST_hessian_on_quadratic():
+    " quick test on quadratic function to see if Hessian estimation is accurate"
+    n = 50
+    (Q, q) = positive_definite_quadratic_data(n)
+    f = f_quadratic(Q, q, n)
+    x = np.random.rand(n)
+
+    h = 0.1
+    G = Q
+    G_approx = finite_difference_hessian(x, f.eval, h)
+    print("L2 of difference between true hessian and approximated hessian of quadratic: \n",
+          np.linalg.norm(G - G_approx, ord=2))
+
+
+def finite_difference_gradient(f, p, epsilon=0.01):
+    p = np.array(p)
+    gradient = np.zeros_like(p)
+
+    for i in range(len(p)):
+        p_shifted_front = p.copy()
+        p_shifted_back = p.copy()
+
+        print("Before addition:", p_shifted_front)
+        p_shifted_front[i] += epsilon
+        print("After addition:", p_shifted_front)
+
+        p_shifted_back[i] -= epsilon
+
+        gradient[i] = (f(*p_shifted_front) -
+                       f(*p_shifted_back)) / (2 * epsilon)
+
+    return gradient
 
 
 def finite_difference_hessian(x, f, h):
@@ -96,6 +123,7 @@ def finite_difference_hessian(x, f, h):
                 f4 = f(x - hi * ei)
                 f5 = f(x - 2 * hi * ei)
                 df = (-f1 + 16*f2 - 30*f3 + 16*f4 - f5) / (12 * hi * hi)
+                hessian[i, j] = df
             else:
                 ej = E[:, j]
                 f1 = f(x + hi * ei + hj * ej)
@@ -103,18 +131,18 @@ def finite_difference_hessian(x, f, h):
                 f3 = f(x - hi * ei + hj * ej)
                 f4 = f(x - hi * ei - hj * ej)
                 df = (f1 - f2 - f3 + f4) / (4 * hi * hj)
-            hessian[i, j] = df
+                hessian[i, j] = df
+                hessian[j, i] = df
     return hessian
 
 
 if __name__ == "__main__":
     # TEST_quadratic_minimum()
+    TEST_hessian_on_quadratic()
+    exit()
     n = 3
     (Q, q) = positive_definite_quadratic_data(n)
     f = f_quadratic(Q, q, n)
     x = np.random.rand(n)
 
-    h = 0.1
-    G = finite_difference_hessian(x, f.eval, h)
-    print(G - G.T)
     print(np.linalg.norm(Q - G, ord=2))
