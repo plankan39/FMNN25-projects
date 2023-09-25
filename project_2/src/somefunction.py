@@ -18,7 +18,7 @@ def calculate_gradient(f, p, epsilon=1e-5):
     
     for i in range(len(p)):
         
-        gradient[i] = (f(p(i)+epsilon) - f(p(i)) / epsilon
+        gradient[i] = (f(p(i)+epsilon) - f(p(i)) / epsilon 
         
     return gradient
  
