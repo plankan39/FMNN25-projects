@@ -6,6 +6,7 @@ def newton(f,point,epsilon,max_iter):
         
         i += 1
         next_point = point - np.dot(HESSIAN,GRADIENT)
+    return next_point
 
 def calculate_gradient(f, p, epsilon=1e-5):
    
