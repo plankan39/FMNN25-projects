@@ -33,9 +33,4 @@ def func(x,y):
 
 p = np.array([1,2], dtype=float)
 print(calculate_gradient(func, p, epsilon=0.1))
-=======
-def calculate_gradient(f, p, epsilon=1e-5):
-    p = np.array(p)
-    gradient = (f(p + epsilon) - f(p)) / epsilon
-    return gradient
->>>>>>> 12056a2e15f2f70328b08399bcf61162cc5edd0e
+
