@@ -63,4 +63,4 @@ def TEST_quadratic_minimum():
 
 
 if __name__ == "__main__":
-    # TEST_quadratic_minimum()
+    TEST_quadratic_minimum()
