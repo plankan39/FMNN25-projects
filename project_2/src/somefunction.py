@@ -9,16 +9,13 @@ def newton(f,point,epsilon,max_iter):
     return next_point
 
 def calculate_gradient(f, p, epsilon=1e-5):
-   
     p = np.array(p)
-    
-   
     gradient = np.zeros_like(p)
     
-    
     for i in range(len(p)):
-        
-        gradient[i] = (f(p[i]+epsilon) - f(p[i]) / epsilon 
+        p_shifted = p.copy()
+        p_shifted[i] += epsilon
+        gradient[i] = (f(p_shifted) - f(p)) / epsilon
         
     return gradient
  
