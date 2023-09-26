@@ -1,12 +1,95 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy import optimize
 
 
+# import warnings
+# warnings.filterwarnings("ignore")
+
+
 class OptimizationProblem:
-    def __init__(self, f, f_gradient=None):
+    def __init__(self, f, f_gradient=None, f_hessian=None):
         self.f = f
         self.f_gradient = f_gradient
-# class Optimizer:
+        self.f_hessian = fhessiant
+
+
+class Optimizer:
+    def __init__():
+        pass
+
+
+class ClassicalNewton(Optimizer):
+    def __init__():
+        pass
+
+    ...
+
+
+optimize.OptimizeResult
+
+
+class OptimizationResult(dict):
+    """
+    Attributes
+    ----------
+    x_mid : ndarray
+        The solution of the optimization.
+    f_min: float
+        The minimum value of the function
+    success : bool
+        Whether or not the optimizer exited successfully.
+    status : int
+        Termination status of the optimizer. Its value depends on the
+        underlying solver. Refer to `message` for details.
+    termination_message : str
+        Description of the cause of the termination.
+    fun, jac, hess: ndarray
+        Values of objective function, its Jacobian and its Hessian (if
+        available). The Hessians may be approximations, see the documentation
+        of the function in question.
+    hess_inv : object
+        Inverse of the objective function's Hessian; may be an approximation.
+        Not available for all solvers. The type of this attribute may be
+        either np.ndarray or scipy.sparse.linalg.LinearOperator.
+    nf_evaluations, nj_evaluations, nh_evaluations : int
+        Number of evaluations of the objective functions and of its
+        Jacobian and Hessian.
+    n_iter : int
+        Number of iterations performed by the optimizer.
+    """
+
+    def __repr__(self):
+        order_keys = ['message', 'success', 'status', 'fun', 'funl', 'x', 'xl',
+                      'col_ind', 'nit', 'lower', 'upper', 'eqlin', 'ineqlin',
+                      'converged', 'flag', 'function_calls', 'iterations',
+                      'root']
+        # 'slack', 'con' are redundant with residuals
+        # 'crossover_nit' is probably not interesting to most users
+        omit_keys = {'slack', 'con', 'crossover_nit'}
+
+        def key(item):
+            try:
+                return order_keys.index(item[0].lower())
+            except ValueError:  # item not in list
+                return np.inf
+
+        def omit_redundant(items):
+            for item in items:
+                if item[0] in omit_keys:
+                    continue
+                yield item
+
+        def item_sorter(d):
+            return sorted(omit_redundant(d.items()), key=key)
+
+        if self.keys():
+            return _dict_formatter(self, sorter=item_sorter)
+        else:
+            return self.__class__.__name__ + "()"
+
+    def __dir__(self):
+        return list(self.keys())
 
 
 class f_quadratic:
@@ -98,6 +181,26 @@ def TEST_classical_newton():
     x0 = np.random.rand(n)
 
     x_list, f_list = minimize_classical_newton(
+        f, x0, epsilon=1e-6, max_iter=10)
+
+    f_min = quadratic.analytic_minimum()
+    x_min = quadratic.analytic_minimizer()
+    f_min_approx = f_list[-1]
+    x_min_approx = x_list[-1]
+
+    print(f"f_min:        {f_min}")
+    print(f"f_min_approx: {f_min_approx }")
+    print(f"L2(x-x_approx1): {np.linalg.norm(x_min - x_min_approx)}")
+
+
+def TEST_newton_exact_line_search():
+    n = 50
+    (Q, q) = positive_definite_quadratic_data(n)
+    quadratic = f_quadratic(Q, q, n)
+    def f(x): return quadratic.eval(x)
+    x0 = np.random.rand(n)
+
+    x_list, f_list = minimize_newton_exact_line_search(
         f, x0, epsilon=1e-6, max_iter=10)
 
     f_min = quadratic.analytic_minimum()
@@ -314,31 +417,54 @@ if __name__ == "__main__":
     # TEST_hessian_on_quadratic()
     # TEST_classical_newton()
     # TEST_rosenbrock()
-    # TODO: implement test newton with exact line search
-
-    # n = 10
-    # (Q, q) = positive_definite_quadratic_data(n)
-    # quadratic = f_quadratic(Q, q, n)
-    # def f(x): return quadratic.eval(x)
-    # x0 = np.random.rand(n)
-    # f_min = quadratic.analytic_minimum()
-    # x_min = quadratic.analytic_minimizer()
-    # f_min_approx = f_list[-1]
-    # x_min_approx = x_list[-1]
-
-    # print(f"f_min:        {f_min}")
-    # print(f"f_min_approx: {f_list[-1]}")
-    # print(f"L2(x-x_approx1): {np.linalg.norm(x_min - x_min_approx)}")
+    # TEST_newton_exact_line_search()
 
     def f(x): return rosenbrock(x)
+    x0 = np.array([0, -0.7])
     x0 = np.random.rand(2)
-
-    x_list, f_list = minimize_newton_exact_line_search(
+    x_list, f_list = minimize_classical_newton(
         f, x0, epsilon=1e-6, max_iter=10)
 
     f_min_approx = f_list[-1]
     x_min_approx = x_list[-1]
+    x_min = np.ones_like(x0)
+    f_min = f(x_min)
 
     print(f"f_min_approx: {f_list[-1]}")
     print(x_min_approx)
-    # print(f"L2(x-x_approx1): {np.linalg.norm(x_min - x_min_approx)}")
+    print(f"L2(x-x_approx1): {np.linalg.norm(x_min - x_min_approx)}")
+
+    nx = 100
+    ny = 100
+    x = np.linspace(-0.5, 2, nx)
+    y = np.linspace(-2, 4, ny)
+
+    X, Y = np.meshgrid(x, y)
+    Z = np.zeros_like(X)
+    for j in range(ny):
+        for i in range(nx):
+            xy = np.array([x[i], y[j]])
+            Z[j, i] = rosenbrock(xy)
+
+    def rosenbrockfunction(x, y): return (1-x)**2+100*(y-x**2)**2
+    print("swfkjhdsflkjh")
+    contour_plot = plt.contour(
+        X, Y, Z, np.logspace(0, 3.5, 7, base=10), cmap='gray')
+    print("swfkjhdsflkjh")
+    plt.title('Rosenbrock Function: ')
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    def rosen(x): return f(x)
+
+    # solution, iterates = so.fmin_powell(
+    #     rosen, x0=array([0, -0.7]), retall=True)
+    from pprint import pprint
+    x_list = np.array(x_list).T
+
+    plt.plot(x_list, 'ro')  # ko black, ro red
+    plt.plot(x_list, 'r:', linewidth=1)  # plot black dotted lines
+    plt.title("Steps of Powell's method to compute a minimum")
+    plt.clabel(contour_plot)
+
+    plt.show()
