@@ -65,14 +65,13 @@ class PowellWolfe(LineSearch):
         """Checks the second Powell-Wolfe condition"""
         print(f"phi_prim(alfa) {self.phi_prime(alpha)}")
         print(f"rho * phi_0 {self.rho * self.phi_prime(0)}")
-        
+
         return self.phi_prime(alpha) >= self.rho * self.phi_prime(0)
 
     def search(self, stepSizeInitial: float) -> float:
         alpha_plus = stepSizeInitial
         alpha_minus = stepSizeInitial
 
-        
         # Find lower and upper bound for alpha that fulfills armijo condition
         while not self.armijo(alpha_minus):
             alpha_minus /= 2
@@ -93,35 +92,31 @@ class PowellWolfe(LineSearch):
 
         return alpha_minus
 
+
 if __name__ == "__main__":
     p = OptimizationProblem(
         f=lambda x: 0.5 * x[0] ** 2 + 4.5 * x[1] ** 2,
         gradF=lambda x: np.array((x[0], 9 * x[1])),
         hessF=lambda x: x,
     )
-#    p = OptimizationProblem(
- #       f=lambda x: 0.5 * x[0] ** 2,
-  #      gradF=lambda x: np.array((x[0])),
-   #     hessF=lambda x: x,
-    #)
-    
-    x_0 =np.array([44, 12])
+    #    p = OptimizationProblem(
+    #       f=lambda x: 0.5 * x[0] ** 2,
+    #      gradF=lambda x: np.array((x[0])),
+    #     hessF=lambda x: x,
+    # )
+
+    x_0 = np.array([44, 12])
     d_0 = np.array([-1, -1])
-    
+
     sigma = 0.01
     rho = 0.9
-    
 
     ls = PowellWolfe(p, x_0, d_0, rho, sigma)
-    from scipy.optimize import line_search 
-    
+    from scipy.optimize import line_search
+
     res = line_search(p.f, p.gradF, x_0, d_0, c1=sigma, c2=rho)
-        
-        
-        
 
     a = ls.search(1)
 
-        
     print(res)
     print(a)
