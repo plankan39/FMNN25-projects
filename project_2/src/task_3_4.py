@@ -1,27 +1,33 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import optimize
+from dataclasses import dataclass
 
 
 # import warnings
 # warnings.filterwarnings("ignore")
 
-
+@dataclass
 class OptimizationProblem:
-    def __init__(self, f, f_gradient=None, f_hessian=None):
-        self.f = f
-        self.f_gradient = f_gradient
-        self.f_hessian = fhessiant
+    f: callable
+    f_gradient: callable = None
+    fhessian: callable = None
 
 
 class Optimizer:
     def __init__():
         pass
 
+    def optimize(optmization_problem: OptimizationProblem):
+        ...
+
 
 class ClassicalNewton(Optimizer):
     def __init__():
         pass
+
+    def optimize(OptimizationProblem):
+        ...
 
     ...
 
@@ -122,7 +128,8 @@ def rosenbrock(x):
 
 def positive_definite_quadratic_data(n, seed=True):
     """
-    generates a positive definite Q and a random vector q
+    generates a positive definite Q and a random vector q,
+    has analytic solution: https://en.wikipedia.org/wiki/Definite_quadratic_form
 
     :return: (Q,q)
     """
@@ -148,9 +155,9 @@ def TEST_quadratic_minimum():
     (Q, q) = positive_definite_quadratic_data(n)
 
     f = f_quadratic(Q, q, n)
-    x = np.random.rand(n)
+    x0 = np.random.rand(n)
 
-    res = optimize.minimize(f.eval, x, method='BFGS', tol=1e-9)
+    res = optimize.minimize(f.eval, x0, method='BFGS', tol=1e-9)
     x_scipy = res.x
     x_analytic = f.analytic_minimizer()
     print(x_analytic)
@@ -265,6 +272,11 @@ def finite_difference_gradient(f, x, h=0.01):
     return gradient
 
 
+def G_update_good_broyden(G):
+    G_new = G
+    return G_new
+
+
 def finite_difference_hessian(x, f, h=0.1):
     """
     h=0.1 actually appears to give better approximations than smaller h
@@ -321,7 +333,7 @@ def minimize_classical_newton(f, x0, epsilon, max_iter):
         x = x_new
         Ginv = np.linalg.inv(finite_difference_hessian(x, f, h=0.1))
         g = finite_difference_gradient(f, x, epsilon)
-        s = -Ginv @ g
+        s = -Ginv @ g  # newton direction
         x_new = x + s
         f_new = f(x_new)
 
@@ -421,9 +433,11 @@ if __name__ == "__main__":
 
     def f(x): return rosenbrock(x)
     x0 = np.array([0, -0.7])
-    x0 = np.random.rand(2)
-    x_list, f_list = minimize_classical_newton(
-        f, x0, epsilon=1e-6, max_iter=10)
+    # x0 = np.random.rand(2)
+    # x_list, f_list = minimize_classical_newton(
+    #     f, x0, epsilon=1e-6, max_iter=10)
+    x_list, f_list = minimize_newton_exact_line_search(
+        f, x0, epsilon=1e-6, max_iter=100, bk=2)
 
     f_min_approx = f_list[-1]
     x_min_approx = x_list[-1]
@@ -446,11 +460,9 @@ if __name__ == "__main__":
             xy = np.array([x[i], y[j]])
             Z[j, i] = rosenbrock(xy)
 
-    def rosenbrockfunction(x, y): return (1-x)**2+100*(y-x**2)**2
-    print("swfkjhdsflkjh")
+    # def rosenbrockfunction(x, y): return (1-x)**2+100*(y-x**2)**2
     contour_plot = plt.contour(
         X, Y, Z, np.logspace(0, 3.5, 7, base=10), cmap='gray')
-    print("swfkjhdsflkjh")
     plt.title('Rosenbrock Function: ')
     plt.xlabel('x')
     plt.ylabel('y')
@@ -459,12 +471,11 @@ if __name__ == "__main__":
 
     # solution, iterates = so.fmin_powell(
     #     rosen, x0=array([0, -0.7]), retall=True)
-    from pprint import pprint
     x_list = np.array(x_list).T
 
     plt.plot(x_list, 'ro')  # ko black, ro red
     plt.plot(x_list, 'r:', linewidth=1)  # plot black dotted lines
-    plt.title("Steps of Powell's method to compute a minimum")
+    plt.title("Steps to find minimum")
     plt.clabel(contour_plot)
 
     plt.show()
