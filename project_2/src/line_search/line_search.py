@@ -9,25 +9,7 @@ class LineSearch(Protocol):
 
     f: Callable[[np.ndarray], float]
 
-    def search(self, x, direction, *args) -> tuple[float, int]:
-        """Perform line search to find the best step size alpha
-
-        Args:
-            stepSizeInitial (float): the initial stepsize guess
-
-        Returns:
-            float: the optimal step size alpha
-        """
-        ...
-
-
-class InexactLineSearch(LineSearch):
-    f: Callable[[np.ndarray], float]
-    gradF: Callable[[np.ndarray], np.ndarray]
-
-    def search(
-        self, x: np.ndarray, direction: np.ndarray, *args
-    ) -> tuple[float, int, int]:
+    def search(self, x: np.ndarray, direction: np.ndarray) -> tuple[float, int]:
         """Perform line search to find the best step size alpha
 
         Args:
@@ -40,25 +22,40 @@ class InexactLineSearch(LineSearch):
 
 
 class ExactLineSearch(LineSearch):
-    def __init__(self, f) -> None:
+    def __init__(
+        self,
+        f,
+        ak: float = 0,
+        bk: float = 1e8,
+        epsilon: float = 1e-4,
+    ) -> None:
+        """_summary_
+
+        Args:
+            f (_type_): _description_
+            ak (float): The lower bound of search area
+            bk (float): the upper bound of search area
+            epsilon (float): The tolerance.
+            ak (float, optional): _description_. Defaults to 0.
+            bk (float, optional): _description_. Defaults to 1e8.
+            epsilon (float, optional): _description_. Defaults to 1e-4.
+        """
         self.f = f
+        self.ak = ak
+        self.bk = bk
+        self.epsilon = epsilon
 
     def search(
         self,
         x: np.ndarray,
         direction: np.ndarray,
-        ak: float,
-        bk: float,
-        epsilon: float,
     ) -> tuple[float, int]:
         """Perform exact line search
 
         Args:
             x (np.ndarray): The current point.
             direction (np.ndarray): The direction to perform the line search in
-            ak (float): The lower bound of search area
-            bk (float): the upper bound of search area
-            epsilon (float): The tolerance.
+
 
         Returns:
             (alpha, fN): where alpha is the step size and fN the number of times
@@ -74,8 +71,8 @@ class ExactLineSearch(LineSearch):
             """
             return self.f(x + alpha * direction)
 
-        lb, ub = ak, bk
-        while abs(ub - lb) > epsilon:
+        lb, ub = self.ak, self.bk
+        while abs(ub - lb) > self.epsilon:
             sigmak = lb + (1 - GOLDEN_RATIO) * (ub - lb)
             ugmak = lb + GOLDEN_RATIO * (ub - lb)
 
@@ -90,77 +87,43 @@ class ExactLineSearch(LineSearch):
         return (ub + lb) / 2, fN
 
 
-def parametrize_function_line(f, x, direction):
-    """
-    Returns a function 'g' such that g(x) gives the value of the function 'f' at a point determined by a step 'gamma' along the 'direction' from 'point'.
-    """
-    return lambda gamma: f(x + gamma * direction)
-
-"""
-def exact_line_search(f, ak, bk, epsilon, alpha=0.618033988749):
-    
-    Performs the exact line search for a function 'f' using the golden section
-    method.
-
-    f: The function to be minimized.
-    ak, bk: The initial interval.
-    alpha: The golden ratio constant.
-    epsilon: The tolerance.
-    Returns the x value where the function 'f' has a minimum in the interval [ak, bk].
-    
-    # Iteratively reduce the interval [ak, bk] until its width is less than epsilon
-    while abs(bk - ak) > epsilon:
-        print("hello", ak, bk)
-        # print(f"Interval: [{ak}, {bk}]")
-
-        # Using golden section search
-        sigmak = ak + (1 - alpha) * (bk - ak)
-        ugmak = ak + alpha * (bk - ak)
-
-        # Determine new interval of uncertainty based on function values at sigmak and ugmak
-        # FIXME: here we have one function evaluation too much, can be optimized
-        if f(sigmak) > f(ugmak):
-            ak = sigmak
-        else:
-            bk = ugmak
-
-    return (bk + ak) / 2
-"""
-
-
-class PowellWolfe(InexactLineSearch):
+class PowellWolfe(LineSearch):
     def __init__(
         self,
         f: Callable[[np.ndarray], float],
         gradF: Callable[[np.ndarray], np.ndarray],
+        stepSizeInitial: float = 2,
+        c1: float = 0.01,
+        c2: float = 0.9,
     ) -> None:
         """Initiates attributes used to perform the lineSearch
 
         Args:
             f (Callable[[np.ndarray], float]): The objective function
-            gradF (Callable[[np.ndarray], np.ndarray]): The gradient of f
+            gradF (Callable[[np.ndarray], np.ndarray]): The gradient of f.
+            stepSizeInitial (float, optional): The initial guess for step size.
+            Defaults to 2.
+            c1 (float): Constant for armijo condition.
+            c2 (float): Constant for wolfe condition
         """
         assert 0 < c1 < 0.5 and c1 < c2 < 1
         self.f = f
         self.gradF = gradF
+        self.stepSizeInitial = stepSizeInitial
+        self.c1 = c1
+        self.c2 = c2
 
     def search(
         self,
         x: np.ndarray,
         direction: np.ndarray,
-        stepSizeInitial: float = 2,
-        c1: float = 0.01,
-        c2: float = 0.9,
     ) -> tuple[float, int, int]:
         """Perform line search with PowellWolfe algorithm
 
         Args:
             x (np.ndarray): The current point
             direction (np.ndarray): A direction that is descending.
-            stepSizeInitial (float, optional): The initial guess for step size.
-            Defaults to 2.
-            c1 (float): Constant for armijo condition.
-            c2 (float): Constant for wolfe condition
+
 
         Returns:
             (alpha: float, fN: int, gN: int): where alpha is the step size
@@ -176,14 +139,14 @@ class PowellWolfe(InexactLineSearch):
             """Checks the armijo condition for a specific stepsize alpha"""
             return self.f(
                 x + alpha * direction
-            ) <= fX + c1 * alpha * direction.T.dot(gradFX)
+            ) <= fX + self.c1 * alpha * direction.T.dot(gradFX)
 
         def wolfe(alpha: float) -> bool:
             """Checks the second Powell-Wolfe condition"""
             phi_prime = direction.T.dot(self.gradF(x + alpha * direction))
-            return np.abs(phi_prime) <= np.abs(c2 * direction.T.dot(gradFX))
+            return np.abs(phi_prime) <= np.abs(self.c2 * direction.T.dot(gradFX))
 
-        alpha_minus = stepSizeInitial
+        alpha_minus = self.stepSizeInitial
         alpha_plus = alpha_minus
 
         # Find lower and upper bound for alpha that fulfills armijo condition

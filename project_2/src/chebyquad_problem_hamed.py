@@ -10,9 +10,10 @@ Claus Führer (2016)
 from scipy import dot, linspace
 import scipy.optimize as so
 from numpy import array
-from task_3_4 import finite_difference_hessian
+from line_search.line_search import ExactLineSearch
+#from task_3_4 import finite_difference_hessian
 
-from optimizer import Problem, Optimization
+from optimizer.optimizer import Problem, Broyden
 
 
 def T(x, n):
@@ -94,6 +95,6 @@ if __name__ == '__main__':
     xmin = so.fmin_bfgs(chebyquad, x, gradchebyquad)
     print(xmin)
     problem = Problem(chebyquad, gradchebyquad)
-    optimization = Optimization(problem=problem)
-    optimization.solve(x)
+    optimization = Broyden(problem, ExactLineSearch(problem.objective_function))
+    optimization.optimize(x)
     optimization.report()

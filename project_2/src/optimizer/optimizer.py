@@ -1,22 +1,108 @@
-import numpy as np
-from scipy.optimize import minimize_scalar
 import copy
+from collections.abc import Callable
+from typing import Protocol
+
 import matplotlib.pyplot as plt
+import numpy as np
+from finite_difference import finite_difference_gradient, finite_difference_hessian
+from line_search.line_search import LineSearch
+from scipy.optimize import minimize_scalar
+
+
+def calc_residual(gk):
+    return np.linalg.norm(gk)
+
+
+def calc_cauchy_diff(x_k_1, x_k):
+    return np.linalg.norm(x_k_1 - x_k)
+
 
 class Problem:
-    def __init__(self, objective_function, gradient_function=None):
-        """
-        Initialize a problem for optimization.
+    """
+    Initialize a problem for optimization.
 
-        Parameters:
-        - objective_function: The objective function to be minimized.
-        - gradient_function: (Optional) The gradient function of the objective function.
-        """
+    Parameters:
+    - objective_function: The objective function to be minimized.
+    - gradient_function: (Optional) The gradient function of the objective function.
+    """
+
+    def __init__(
+        self,
+        objective_function: Callable[[np.ndarray], float],
+        gradient_function: Callable[[np.ndarray], np.ndarray] | None = None,
+        hessian_function: Callable[[np.ndarray], np.ndarray] | None = None,
+    ) -> None:
         self.objective_function = objective_function
-        self.gradient_function = gradient_function
+        self.gradient_function = (
+            gradient_function
+            if gradient_function
+            else lambda x: finite_difference_gradient(objective_function, x, 1e-6)
+        )
+        self.hessian_function = (
+            hessian_function
+            if hessian_function
+            else lambda x: finite_difference_hessian(x, objective_function)
+        )
 
-class Optimization:
-    def __init__(self, problem, residual_criterion=1e-10, cauchy_criterion=1e-10, max_iterations=500):
+
+class NewtonOptimizer(Protocol):
+    problem: Problem
+
+    def optimize(self, *args):
+        ...
+
+
+class QuasiNewtonOptimizer(Protocol):
+    problem: Problem
+    lineSearch: LineSearch
+
+    def optimize(self, *args):
+        ...
+
+
+class ClassicalNewton(NewtonOptimizer):
+    def __init__(self, problem: Problem) -> None:
+        self.problem = problem
+
+    def optimize(self, x0: np.ndarray, epsilon: float = 1e-4, max_iter: int = 100):
+        f = self.problem.objective_function
+        gradF = self.problem.gradient_function
+        hessF = self.problem.hessian_function
+
+        x_list = [x0]
+        f_list = [f(x0)]
+        x_new = x0
+        for _ in range(max_iter):
+            x = x_new
+            Ginv = np.linalg.inv(hessF(x))
+            g = gradF(x)
+            s = -Ginv @ g  # newton direction
+            x_new = x + s
+            f_new = f(x_new)
+
+            x_list.append(x_new)
+            f_list.append(f_new)
+
+            residual = calc_residual(g)
+            cauchy = calc_cauchy_diff(x_new, x)
+            if residual < epsilon or cauchy < epsilon:
+                # print(f"residual {residual}")
+                # print(f"cauchy {cauchy }")
+                break
+
+                # x_new = HESSIAN, GRADIENT)
+        return x_list, f_list
+
+
+class Broyden(QuasiNewtonOptimizer):
+    def __init__(
+        self,
+        problem: Problem,
+        lineSearch: LineSearch,
+        residual_criterion: float = 1e-10,
+        cauchy_criterion: float = 1e-10,
+        max_iterations: int = 500,
+    ):
         """
         Initialize an optimization solver.
 
@@ -27,13 +113,14 @@ class Optimization:
         - max_iterations: The maximum number of iterations for the solver.
         """
         self.problem = problem
+        self.lineSearch = lineSearch
         self.residual_criterion = residual_criterion
         self.cauchy_criterion = cauchy_criterion
         self.max_iterations = max_iterations if max_iterations > 0 else 100000
         self.points = []  # Store optimization path
         self.success = False  # Flag indicating whether optimization succeeded
 
-    def solve(self, x_0):
+    def optimize(self, x_0):
         """
         Solve the optimization problem starting from an initial guess.
 
@@ -45,19 +132,19 @@ class Optimization:
         """
         x = x_next = x_0
         H = np.eye(len(x))
-        g = self.compute_gradient(x)
+        g = self.problem.gradient_function(x)
         self.points.append(copy.deepcopy(x_next))
 
-        for iteration in range(self.max_iterations):
+        for _ in range(self.max_iterations):
             s = -np.dot(H, g)
-            alpha = self.line_search(x, s)
+            alpha = self.lineSearch.search(x, s)
             x_next = x + alpha * s
             self.points.append(copy.deepcopy(x_next))
             if self.check_criterion(x, x_next, g):
                 self.success = True
                 break
 
-            g_next = self.compute_gradient(x_next)
+            g_next = self.problem.gradient_function(x_next)
             H = self.calculate_hessian(H, x_next, x, g, g_next)
 
             g = copy.deepcopy(g_next)
@@ -79,27 +166,13 @@ class Optimization:
         Returns:
         - True if any of the termination criteria are met, otherwise False.
         """
-        return (np.linalg.norm(x_next - x) < self.cauchy_criterion) or (np.linalg.norm(g) < self.residual_criterion)
+        return (np.linalg.norm(x_next - x) < self.cauchy_criterion) or (
+            np.linalg.norm(g) < self.residual_criterion
+        )
 
-    def compute_gradient(self, x):
-        """
-        Compute the gradient at a given solution.
 
-        Parameters:
-        - x: The solution at which the gradient is computed.
-
-        Returns:
-        - The gradient vector.
-        """
-        if self.problem.gradient_function:
-            return self.problem.gradient_function(x)
-        return self.calculate_gradient(x)  # To be implemented in derived classes
-
-    def calculate_gradient(self,x):
-        raise NotImplementedError
-
-    def line_search(self, x, s):
-        """
+    """def line_search(self, x, s):
+        " ""
         Perform line search to find an optimal step size.
 
         Parameters:
@@ -108,7 +181,8 @@ class Optimization:
 
         Returns:
         - The optimal step size.
-        """
+        " ""
+
         def func(alpha):
             return self.problem.objective_function(x + alpha * s)
 
@@ -117,6 +191,7 @@ class Optimization:
             return minimize_search.x
         else:
             raise Exception("Exact line search failed to converge.")
+        """
 
     def report(self):
         """
@@ -158,7 +233,9 @@ class Optimization:
 
         return H
 
-    def function_plot(self, min_range=(-0.5, -2), max_range=(2, 4), range_steps=(100, 100)):
+    def function_plot(
+        self, min_range=(-0.5, -2), max_range=(2, 4), range_steps=(100, 100)
+    ):
         """
         Create a contour plot of the optimization problem's objective function.
 
@@ -173,17 +250,26 @@ class Optimization:
         y = np.linspace(min_range[1], max_range[1], range_steps[1])
         x, y = np.meshgrid(x, y)
         Z = self.problem.objective_function([x, y])
-        levels = np.hstack((np.arange(Z.min() - 1, 5, 2), np.arange(5, Z.max() + 1, 50)))
+        levels = np.hstack(
+            (np.arange(Z.min() - 1, 5, 2), np.arange(5, Z.max() + 1, 50))
+        )
 
         plt.figure(figsize=(8, 6))
-        contour = plt.contour(x, y, Z, levels=levels, cmap='viridis')
-        plt.clabel(contour, inline=1, fontsize=10, fmt='%d')
+        contour = plt.contour(x, y, Z, levels=levels, cmap="viridis")
+        plt.clabel(contour, inline=1, fontsize=10, fmt="%d")
 
         points = np.asarray(self.points)
-        plt.plot(points[:, 0], points[:, 1], marker='o', color='red', linestyle='-', markersize=5)
+        plt.plot(
+            points[:, 0],
+            points[:, 1],
+            marker="o",
+            color="red",
+            linestyle="-",
+            markersize=5,
+        )
 
-        plt.colorbar(contour, label='Objective Function Value')
-        plt.xlabel('x')
-        plt.ylabel('y')
-        plt.title('Contour Plot of Objective Function')
-        plt.savefig('Contour_Plot.png')
+        plt.colorbar(contour, label="Objective Function Value")
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.title("Contour Plot of Objective Function")
+        plt.savefig("Contour_Plot.png")
