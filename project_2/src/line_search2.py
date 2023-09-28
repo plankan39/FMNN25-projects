@@ -33,8 +33,8 @@ class PowellWolfe(LineSearch):
         direction: np.ndarray,
         c1: float,
         c2: float,
-        fX: float | None = None,
-        gX: np.ndarray | None = None,
+        fX=None,
+        gX=None,
     ) -> None:
         """Initiates attributes used to perform the lineSearch
 
@@ -119,8 +119,8 @@ class PowellWolfe(LineSearch):
 if __name__ == "__main__":
     from scipy.optimize import line_search
 
-    f = lambda x: 0.5 * x[0] ** 2 + 4.5 * x[1] ** 2
-    gradF = lambda x: np.array((x[0], 9 * x[1]))
+    def f(x): return 0.5 * x[0] ** 2 + 4.5 * x[1] ** 2
+    def gradF(x): return np.array((x[0], 9 * x[1]))
     """
     f=lambda x: 0.5 * x[0] ** 2
     gradF=lambda x: np.array((x[0]))

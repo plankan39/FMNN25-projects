@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import optimize
 from dataclasses import dataclass
+from line_search2 import PowellWolfe
 
 
 # import warnings
@@ -380,6 +381,7 @@ def exact_line_search(f, ak, bk, epsilon, alpha=0.618033988749):
     """
     # Iteratively reduce the interval [ak, bk] until its width is less than epsilon
     while abs(bk - ak) > epsilon:
+        print("hello", ak, bk)
         # print(f"Interval: [{ak}, {bk}]")
 
         # Using golden section search
@@ -397,6 +399,10 @@ def exact_line_search(f, ak, bk, epsilon, alpha=0.618033988749):
 
 
 def minimize_newton_exact_line_search(f, x0, epsilon, max_iter, ak=0, bk=1e8, line_search_epsilon=1e-4):
+
+    def gradF(x): return np.array((x[0], 9 * x[1]))
+    c1,c2 = 0.01, 0.9
+    line_search = PowellWolfe(f,gradF,x0,np.array([-1,-1]), c1,c2)
     x_list = [x0]
     f_list = [f(x0)]
     x_new = x0
@@ -406,7 +412,11 @@ def minimize_newton_exact_line_search(f, x0, epsilon, max_iter, ak=0, bk=1e8, li
         g = finite_difference_gradient(f, x, epsilon)
         s = -Ginv @ g
         f_line = parametrize_function_line(f, x, s)
-        gamma_min = exact_line_search(f_line, ak, bk,  line_search_epsilon)
+        
+        # gamma_min = exact_line_search(f_line, ak, bk,  line_search_epsilon)
+        line_search.direction = s
+        (gamma_min,*_) = line_search.search()
+        print("gamam min", gamma_min)
         x_new = x + gamma_min * s
         f_new = f(x_new)
 
@@ -432,49 +442,56 @@ if __name__ == "__main__":
     # TEST_newton_exact_line_search()
 
     def f(x): return rosenbrock(x)
-    x0 = np.array([0, -0.7])
+    def f(x): return 0.5 * x[0] ** 2 + 4.5 * x[1] ** 2
+    x0 = np.array([12, 110])
     # x0 = np.random.rand(2)
     # x_list, f_list = minimize_classical_newton(
     #     f, x0, epsilon=1e-6, max_iter=10)
     x_list, f_list = minimize_newton_exact_line_search(
-        f, x0, epsilon=1e-6, max_iter=100, bk=2)
+        f, x0, epsilon=1e-6, max_iter=100, bk=10)
+    # x_list, f_list = minimize_classical_newton(
+    #     f, x0, epsilon=1e-6, max_iter=100)
 
-    f_min_approx = f_list[-1]
-    x_min_approx = x_list[-1]
-    x_min = np.ones_like(x0)
-    f_min = f(x_min)
+    # f_min_approx = f_list[-1]
+    # x_min_approx = x_list[-1]
+    # x_min = np.ones_like(x0)
+    # f_min = f(x_min)
 
-    print(f"f_min_approx: {f_list[-1]}")
-    print(x_min_approx)
-    print(f"L2(x-x_approx1): {np.linalg.norm(x_min - x_min_approx)}")
+    # print(f"f_min_approx: {f_list[-1]}")
+    # print(x_min_approx)
+    # print(f"L2(x-x_approx1): {np.linalg.norm(x_min - x_min_approx)}")
 
     nx = 100
     ny = 100
-    x = np.linspace(-0.5, 2, nx)
-    y = np.linspace(-2, 4, ny)
+    # x = np.linspace(-0.5, 2, nx)
+    # y = np.linspace(-2, 4, ny)
+    x = np.linspace(-5, 5, nx)
+    y = np.linspace(-5, 5, ny)
+
+    from pprint import pprint
+    pprint(x_list)
 
     X, Y = np.meshgrid(x, y)
     Z = np.zeros_like(X)
     for j in range(ny):
         for i in range(nx):
             xy = np.array([x[i], y[j]])
-            Z[j, i] = rosenbrock(xy)
+            Z[j, i] = f(xy)
 
     # def rosenbrockfunction(x, y): return (1-x)**2+100*(y-x**2)**2
     contour_plot = plt.contour(
-        X, Y, Z, np.logspace(0, 3.5, 7, base=10), cmap='gray')
+        X, Y, Z, np.logspace(0, 3.5, 10, base=10), cmap='gray')
     plt.title('Rosenbrock Function: ')
     plt.xlabel('x')
     plt.ylabel('y')
 
-    def rosen(x): return f(x)
+    x_list = np.array(x_list)
+    pprint(x_list)
 
-    # solution, iterates = so.fmin_powell(
-    #     rosen, x0=array([0, -0.7]), retall=True)
-    x_list = np.array(x_list).T
-
-    plt.plot(x_list, 'ro')  # ko black, ro red
-    plt.plot(x_list, 'r:', linewidth=1)  # plot black dotted lines
+    # plt.plot(x_list, 'ro')  # ko black, ro red
+    plt.plot(x_list[:, 0], x_list[:, 1], 'ro')  # ko black, ro red
+    plt.plot(x_list[:, 0], x_list[:, 1], 'r:',
+             linewidth=1)  # plot black dotted lines
     plt.title("Steps to find minimum")
     plt.clabel(contour_plot)
 

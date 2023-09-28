@@ -10,8 +10,10 @@ Claus Führer (2016)
 from scipy import dot, linspace
 import scipy.optimize as so
 from numpy import array
+from task_3_4 import finite_difference_hessian
 
-from optimizer import Problem,Optimization
+from optimizer import Problem, Optimization
+
 
 def T(x, n):
     """
@@ -88,9 +90,10 @@ def gradchebyquad(x):
 
 if __name__ == '__main__':
     x = linspace(0, 1, 8)
-    xmin = so.fmin_bfgs(chebyquad, x, gradchebyquad)  # should converge after 18 iterations
+    # should converge after 18 iterations
+    xmin = so.fmin_bfgs(chebyquad, x, gradchebyquad)
     print(xmin)
-    problem = Problem(chebyquad,gradchebyquad)
+    problem = Problem(chebyquad, gradchebyquad)
     optimization = Optimization(problem=problem)
     optimization.solve(x)
     optimization.report()
