@@ -1,3 +1,4 @@
+from typing import Callable
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import optimize
@@ -8,11 +9,12 @@ from line_search2 import PowellWolfe
 # import warnings
 # warnings.filterwarnings("ignore")
 
+
 @dataclass
 class OptimizationProblem:
-    f: callable
-    f_gradient: callable = None
-    fhessian: callable = None
+    f: Callable
+    f_gradient = None
+    fhessian = None
 
 
 class Optimizer:
@@ -67,13 +69,29 @@ class OptimizationResult(dict):
     """
 
     def __repr__(self):
-        order_keys = ['message', 'success', 'status', 'fun', 'funl', 'x', 'xl',
-                      'col_ind', 'nit', 'lower', 'upper', 'eqlin', 'ineqlin',
-                      'converged', 'flag', 'function_calls', 'iterations',
-                      'root']
+        order_keys = [
+            "message",
+            "success",
+            "status",
+            "fun",
+            "funl",
+            "x",
+            "xl",
+            "col_ind",
+            "nit",
+            "lower",
+            "upper",
+            "eqlin",
+            "ineqlin",
+            "converged",
+            "flag",
+            "function_calls",
+            "iterations",
+            "root",
+        ]
         # 'slack', 'con' are redundant with residuals
         # 'crossover_nit' is probably not interesting to most users
-        omit_keys = {'slack', 'con', 'crossover_nit'}
+        omit_keys = {"slack", "con", "crossover_nit"}
 
         def key(item):
             try:
@@ -104,8 +122,8 @@ class f_quadratic:
     # f(x) = 1/2 * xT*Q*x + qTx
     def __init__(self, Q, q, n):
         self.n = n
-        assert (Q.shape == (n, n))
-        assert (q.shape == (n,))
+        assert Q.shape == (n, n)
+        assert q.shape == (n,)
         self.Q = Q
         self.q = q
         self.qT = q.T
@@ -113,7 +131,7 @@ class f_quadratic:
 
     def eval(self, x):
         # assert (x.shape == (self.n,))
-        return 1/2 * x.T @ self.Q @ x + self.qT @ x
+        return 1 / 2 * x.T @ self.Q @ x + self.qT @ x
 
     def analytic_minimizer(self):
         return -self.Qinv @ self.q
@@ -124,7 +142,7 @@ class f_quadratic:
 
 
 def rosenbrock(x):
-    return 100 * (x[1]-x[0] ** 2) ** 2 + (1 - x[0])**2
+    return 100 * (x[1] - x[0] ** 2) ** 2 + (1 - x[0]) ** 2
 
 
 def positive_definite_quadratic_data(n, seed=True):
@@ -137,12 +155,11 @@ def positive_definite_quadratic_data(n, seed=True):
     if seed == False:
         rs = np.random
     else:
-        rs = np.random.RandomState(
-            np.random.MT19937(np.random.SeedSequence(seed)))
+        rs = np.random.RandomState(np.random.MT19937(np.random.SeedSequence(seed)))
     Q = rs.randn(n, n)
-    Q = Q.T@Q
+    Q = Q.T @ Q
 
-    assert (np.all(np.linalg.eigvals(Q) > 0))
+    assert np.all(np.linalg.eigvals(Q) > 0)
     q = rs.randn(n)
 
     return Q, q
@@ -158,17 +175,19 @@ def TEST_quadratic_minimum():
     f = f_quadratic(Q, q, n)
     x0 = np.random.rand(n)
 
-    res = optimize.minimize(f.eval, x0, method='BFGS', tol=1e-9)
+    res = optimize.minimize(f.eval, x0, method="BFGS", tol=1e-9)
     x_scipy = res.x
     x_analytic = f.analytic_minimizer()
     print(x_analytic)
     print(x_scipy)
-    print("diff between analytic solution and scipys bfgs solver solution",
-          np.linalg.norm(x_scipy - x_analytic))
+    print(
+        "diff between analytic solution and scipys bfgs solver solution",
+        np.linalg.norm(x_scipy - x_analytic),
+    )
 
 
 def TEST_hessian_on_quadratic():
-    " quick test on quadratic function to see if Hessian estimation is accurate"
+    "quick test on quadratic function to see if Hessian estimation is accurate"
     n = 10
     (Q, q) = positive_definite_quadratic_data(n, seed=False)
     f = f_quadratic(Q, q, n)
@@ -177,19 +196,23 @@ def TEST_hessian_on_quadratic():
     h = 0.1
     G = Q
     G_approx = finite_difference_hessian(x, f.eval, h)
-    print("L2 of difference between true hessian and approximated hessian of quadratic: \n",
-          np.linalg.norm(G - G_approx, ord=2))
+    print(
+        "L2 of difference between true hessian and approximated hessian of quadratic: \n",
+        np.linalg.norm(G - G_approx, ord=2),
+    )
 
 
 def TEST_classical_newton():
     n = 50
     (Q, q) = positive_definite_quadratic_data(n)
     quadratic = f_quadratic(Q, q, n)
-    def f(x): return quadratic.eval(x)
+
+    def f(x):
+        return quadratic.eval(x)
+
     x0 = np.random.rand(n)
 
-    x_list, f_list = minimize_classical_newton(
-        f, x0, epsilon=1e-6, max_iter=10)
+    x_list, f_list = minimize_classical_newton(f, x0, epsilon=1e-6, max_iter=10)
 
     f_min = quadratic.analytic_minimum()
     x_min = quadratic.analytic_minimizer()
@@ -205,11 +228,13 @@ def TEST_newton_exact_line_search():
     n = 50
     (Q, q) = positive_definite_quadratic_data(n)
     quadratic = f_quadratic(Q, q, n)
-    def f(x): return quadratic.eval(x)
+
+    def f(x):
+        return quadratic.eval(x)
+
     x0 = np.random.rand(n)
 
-    x_list, f_list = minimize_newton_exact_line_search(
-        f, x0, epsilon=1e-6, max_iter=10)
+    x_list, f_list = minimize_newton_exact_line_search(f, x0, epsilon=1e-6, max_iter=10)
 
     f_min = quadratic.analytic_minimum()
     x_min = quadratic.analytic_minimizer()
@@ -227,7 +252,7 @@ def TEST_rosenbrock():
         x = np.random.rand(2)
         r1 = optimize.rosen(x)
         r2 = rosenbrock(x)
-        res = np.linalg.norm(r1-r2)
+        res = np.linalg.norm(r1 - r2)
         worst = max(worst, res)
 
     print("worst", res)
@@ -247,8 +272,7 @@ def finite_difference_gradient_alt(f, p, epsilon=0.01):
 
         p_shifted_back[i] -= epsilon
 
-        gradient[i] = (f(*p_shifted_front) -
-                       f(*p_shifted_back)) / (2 * epsilon)
+        gradient[i] = (f(*p_shifted_front) - f(*p_shifted_back)) / (2 * epsilon)
 
     return gradient
 
@@ -304,7 +328,7 @@ def finite_difference_hessian(x, f, h=0.1):
                 f3 = f(x)
                 f4 = f(x - hi * ei)
                 f5 = f(x - 2 * hi * ei)
-                df = (-f1 + 16*f2 - 30*f3 + 16*f4 - f5) / (12 * hi * hi)
+                df = (-f1 + 16 * f2 - 30 * f3 + 16 * f4 - f5) / (12 * hi * hi)
                 hessian[i, j] = df
             else:
                 ej = E[:, j]
@@ -398,11 +422,13 @@ def exact_line_search(f, ak, bk, epsilon, alpha=0.618033988749):
     return (bk + ak) / 2
 
 
-def minimize_newton_exact_line_search(f, x0, epsilon, max_iter, ak=0, bk=1e8, line_search_epsilon=1e-4):
+def minimize_newton_exact_line_search(
+    f, x0, epsilon, max_iter, ak=0, bk=1e8, line_search_epsilon=1e-4
+):
+    def gradF(x):
+        return np.array((x[0], 9 * x[1]))
 
-    def gradF(x): return np.array((x[0], 9 * x[1]))
-    c1,c2 = 0.01, 0.9
-    line_search = PowellWolfe(f,gradF,x0,np.array([-1,-1]), c1,c2)
+    c1, c2 = 0.01, 0.9
     x_list = [x0]
     f_list = [f(x0)]
     x_new = x0
@@ -411,11 +437,15 @@ def minimize_newton_exact_line_search(f, x0, epsilon, max_iter, ak=0, bk=1e8, li
         Ginv = np.linalg.inv(finite_difference_hessian(x, f, h=0.1))
         g = finite_difference_gradient(f, x, epsilon)
         s = -Ginv @ g
+        print(f"\nx: {x}")
+        print(f"Ginv:\n{Ginv}")
+        print(f"g: {g}")
+        print(f"s: {s}")
         f_line = parametrize_function_line(f, x, s)
-        
+
+        line_search = PowellWolfe(f, gradF, x, s, c1, c2)
         # gamma_min = exact_line_search(f_line, ak, bk,  line_search_epsilon)
-        line_search.direction = s
-        (gamma_min,*_) = line_search.search()
+        (gamma_min, *_) = line_search.search()
         print("gamam min", gamma_min)
         x_new = x + gamma_min * s
         f_new = f(x_new)
@@ -441,14 +471,17 @@ if __name__ == "__main__":
     # TEST_rosenbrock()
     # TEST_newton_exact_line_search()
 
-    def f(x): return rosenbrock(x)
-    def f(x): return 0.5 * x[0] ** 2 + 4.5 * x[1] ** 2
+    # def f(x): return rosenbrock(x)
+    def f(x):
+        return 0.5 * x[0] ** 2 + 4.5 * x[1] ** 2
+
     x0 = np.array([12, 110])
     # x0 = np.random.rand(2)
     # x_list, f_list = minimize_classical_newton(
     #     f, x0, epsilon=1e-6, max_iter=10)
     x_list, f_list = minimize_newton_exact_line_search(
-        f, x0, epsilon=1e-6, max_iter=100, bk=10)
+        f, x0, epsilon=1e-6, max_iter=100, bk=10
+    )
     # x_list, f_list = minimize_classical_newton(
     #     f, x0, epsilon=1e-6, max_iter=100)
 
@@ -469,6 +502,7 @@ if __name__ == "__main__":
     y = np.linspace(-5, 5, ny)
 
     from pprint import pprint
+
     pprint(x_list)
 
     X, Y = np.meshgrid(x, y)
@@ -479,19 +513,17 @@ if __name__ == "__main__":
             Z[j, i] = f(xy)
 
     # def rosenbrockfunction(x, y): return (1-x)**2+100*(y-x**2)**2
-    contour_plot = plt.contour(
-        X, Y, Z, np.logspace(0, 3.5, 10, base=10), cmap='gray')
-    plt.title('Rosenbrock Function: ')
-    plt.xlabel('x')
-    plt.ylabel('y')
+    contour_plot = plt.contour(X, Y, Z, np.logspace(0, 3.5, 10, base=10), cmap="gray")
+    plt.title("Rosenbrock Function: ")
+    plt.xlabel("x")
+    plt.ylabel("y")
 
     x_list = np.array(x_list)
     pprint(x_list)
 
     # plt.plot(x_list, 'ro')  # ko black, ro red
-    plt.plot(x_list[:, 0], x_list[:, 1], 'ro')  # ko black, ro red
-    plt.plot(x_list[:, 0], x_list[:, 1], 'r:',
-             linewidth=1)  # plot black dotted lines
+    plt.plot(x_list[:, 0], x_list[:, 1], "ro")  # ko black, ro red
+    plt.plot(x_list[:, 0], x_list[:, 1], "r:", linewidth=1)  # plot black dotted lines
     plt.title("Steps to find minimum")
     plt.clabel(contour_plot)
 
