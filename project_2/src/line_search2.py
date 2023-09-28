@@ -152,3 +152,5 @@ if __name__ == "__main__":
     print(f"  gradF(x + a*d) = {gradF(x_0+ a * d_0)}")
     print(f"  -d*gradF(x + ad) = {-d_0.T.dot(gradF(x_0+ a * d_0))}")
     print(f"  -c2*d*gradF(x) = {-c2*d_0.T.dot(gradF(x_0))}")
+    print(f"  {f(x_0+ a * d_0)} <= {f(x_0) + c1*a*d_0.dot(gradF(x_0))}")
+    print(f"  {-d_0.T.dot(gradF(x_0+ a * d_0))} <= {-c2*d_0.T.dot(gradF(x_0))}")
