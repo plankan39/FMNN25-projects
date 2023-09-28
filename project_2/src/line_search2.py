@@ -1,16 +1,7 @@
-from dataclasses import dataclass
 from collections.abc import Callable
 from typing import Protocol
+
 import numpy as np
-
-
-@dataclass
-class OptimizationProblem:
-    """Class describing an optimazation problem"""
-
-    f: Callable[[np.ndarray], float]
-    gradF: Callable[[np.ndarray], np.ndarray]
-    hessF: Callable[[np.ndarray], np.ndarray]
 
 
 class LineSearch(Protocol):
