@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 .vscode/settings.json
 project_1/mnist.pkl
+shell.nix
