@@ -12,7 +12,7 @@ class LineSearch(Protocol):
     x: np.ndarray
     direction: np.ndarray
 
-    def search(self, stepSizeInitial: float):
+    def search(self, stepSizeInitial: float) -> tuple[float, int, int]:
         """Perform line search to find the best step size alpha
 
         Args:
