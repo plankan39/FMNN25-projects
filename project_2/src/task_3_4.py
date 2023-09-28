@@ -122,8 +122,6 @@ def rosenbrock(x):
     return 100 * (x[1] - x[0] ** 2) ** 2 + (1 - x[0]) ** 2
 
 
-
-
 def calc_residual(gk):
     return np.linalg.norm(gk)
 
@@ -258,7 +256,8 @@ if __name__ == "__main__":
             Z[j, i] = f(xy)
 
     # def rosenbrockfunction(x, y): return (1-x)**2+100*(y-x**2)**2
-    contour_plot = plt.contour(X, Y, Z, np.logspace(0, 3.5, 10, base=10), cmap="gray")
+    contour_plot = plt.contour(X, Y, Z, np.logspace(
+        0, 3.5, 10, base=10), cmap="gray")
     plt.title("Rosenbrock Function: ")
     plt.xlabel("x")
     plt.ylabel("y")
@@ -268,7 +267,8 @@ if __name__ == "__main__":
 
     # plt.plot(x_list, 'ro')  # ko black, ro red
     plt.plot(x_list[:, 0], x_list[:, 1], "ro")  # ko black, ro red
-    plt.plot(x_list[:, 0], x_list[:, 1], "r:", linewidth=1)  # plot black dotted lines
+    plt.plot(x_list[:, 0], x_list[:, 1], "r:",
+             linewidth=1)  # plot black dotted lines
     plt.title("Steps to find minimum")
     plt.clabel(contour_plot)
 
