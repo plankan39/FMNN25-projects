@@ -106,10 +106,8 @@ class PowellWolfe(LineSearch):
             alpha_plus *= 2
 
         # Find a value between the bounds that fulfills the second condition
-        print(alpha_minus, alpha_plus)
         while not self.wolfe(alpha_minus):
             alpha_0 = (alpha_plus + alpha_minus) / 2
-            print(alpha_0)
             if self.armijo(alpha_0):
                 alpha_minus = alpha_0
             else:
@@ -119,44 +117,38 @@ class PowellWolfe(LineSearch):
 
 
 if __name__ == "__main__":
-    p = OptimizationProblem(
-        f=lambda x: 0.5 * x[0] ** 2 + 4.5 * x[1] ** 2,
-        gradF=lambda x: np.array((x[0], 9 * x[1])),
-        hessF=lambda x: x,
-    )
+    from scipy.optimize import line_search
+
+    f = lambda x: 0.5 * x[0] ** 2 + 4.5 * x[1] ** 2
+    gradF = lambda x: np.array((x[0], 9 * x[1]))
     """
-    p = OptimizationProblem(
-        f=lambda x: 0.5 * x[0] ** 2,
-        gradF=lambda x: np.array((x[0])),
-        hessF=lambda x: x,
-    )
+    f=lambda x: 0.5 * x[0] ** 2
+    gradF=lambda x: np.array((x[0]))
     """
 
     x_0 = np.array([12, 110])
     d_0 = np.array([-1, -1])
-
     """
     x_0 = np.array([12])
     d_0 = np.array([-1])
     """
+
     c1 = 0.01
     c2 = 0.9
 
-    ls = PowellWolfe(p.f, p.gradF, x_0, d_0, c1, c2)
-    from scipy.optimize import line_search
+    print("\nResults:")
+    res = line_search(f, gradF, x_0, d_0, c1=c1, c2=c2)
+    print(f"  scipy: alpha = {res[0]}, fn = {res[1]}, gn = {res[2]}")
 
-    res = line_search(p.f, p.gradF, x_0, d_0, c1=c1, c2=c2)
+    ls = PowellWolfe(f, gradF, x_0, d_0, c1, c2)
+    a, fn, gn = ls.search()
+    print(f"  PowellWolfe: alpha = {a}, fn = {fn}, gn = {gn}")
 
-    a, f, g = ls.search()
-
-    print(res)
-    print(a, f, g)
-
-    print("\n\n")
-    print(f"f(x_0) = {p.f(x_0)}")
-    print(f"f(x_0 + a*d_0) = {p.f(x_0+ a * d_0)}")
-    print(f"f(x) + c_1*a*d_0*f(x_0) = {p.f(x_0) + c1*a*d_0.T.dot(p.gradF(x_0))}")
-    print(f"grafF(x_0) = {p.gradF(x_0)}")
-    print(f"grafF(x_0 + a*d_0) = {p.gradF(x_0+ a * d_0)}")
-    print(f"-d*gradF(x + ad) = {-d_0.T.dot(p.gradF(x_0+ a * d_0))}")
-    print(f"-c2*d*gradF(x) = {-c2*d_0.T.dot(p.gradF(x_0))}")
+    print("\nCalculations:")
+    print(f"  f(x) = {f(x_0)}")
+    print(f"  f(x + a*d) = {f(x_0+ a * d_0)}")
+    print(f"  f(x) + c1*a*d@f(x) = {f(x_0) + c1*a*d_0.T.dot(gradF(x_0))}")
+    print(f"  gradF(x) = {gradF(x_0)}")
+    print(f"  gradF(x + a*d) = {gradF(x_0+ a * d_0)}")
+    print(f"  -d*gradF(x + ad) = {-d_0.T.dot(gradF(x_0+ a * d_0))}")
+    print(f"  -c2*d*gradF(x) = {-c2*d_0.T.dot(gradF(x_0))}")
