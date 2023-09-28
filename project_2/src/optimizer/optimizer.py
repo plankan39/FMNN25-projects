@@ -137,7 +137,8 @@ class Broyden(QuasiNewtonOptimizer):
 
         for _ in range(self.max_iterations):
             s = -np.dot(H, g)
-            alpha = self.lineSearch.search(x, s)
+            alpha, *_ = self.lineSearch.search(x, s)
+            alpha = self.line_search(x, s)
             x_next = x + alpha * s
             self.points.append(copy.deepcopy(x_next))
             if self.check_criterion(x, x_next, g):
@@ -171,8 +172,8 @@ class Broyden(QuasiNewtonOptimizer):
         )
 
 
-    """def line_search(self, x, s):
-        " ""
+    def line_search(self, x, s):
+        """
         Perform line search to find an optimal step size.
 
         Parameters:
@@ -181,7 +182,7 @@ class Broyden(QuasiNewtonOptimizer):
 
         Returns:
         - The optimal step size.
-        " ""
+        """
 
         def func(alpha):
             return self.problem.objective_function(x + alpha * s)
@@ -191,7 +192,7 @@ class Broyden(QuasiNewtonOptimizer):
             return minimize_search.x
         else:
             raise Exception("Exact line search failed to converge.")
-        """
+
 
     def report(self):
         """
