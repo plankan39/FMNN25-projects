@@ -95,6 +95,7 @@ class PowellWolfe(LineSearch):
 
         # Find lower and upper bound for alpha that fulfills armijo condition
         while not self.armijo(alpha_minus):
+            print('1')
             alpha_plus = alpha_minus
             alpha_minus /= 2
 
@@ -103,14 +104,18 @@ class PowellWolfe(LineSearch):
         #     return alpha_minus, self.fTimes, self.gTimes
 
         while self.armijo(alpha_plus):
+            print('2')
             alpha_plus *= 2
 
         # Find a value between the bounds that fulfills the second condition
         while not self.wolfe(alpha_minus):
+            print(alpha_plus - alpha_minus)
             alpha_0 = (alpha_plus + alpha_minus) / 2
             if self.armijo(alpha_0):
+                print('3')
                 alpha_minus = alpha_0
             else:
+                print('4')
                 alpha_plus = alpha_0
 
         return alpha_minus, self.fTimes, self.gTimes

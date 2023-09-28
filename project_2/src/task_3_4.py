@@ -155,7 +155,8 @@ def positive_definite_quadratic_data(n, seed=True):
     if seed == False:
         rs = np.random
     else:
-        rs = np.random.RandomState(np.random.MT19937(np.random.SeedSequence(seed)))
+        rs = np.random.RandomState(
+            np.random.MT19937(np.random.SeedSequence(seed)))
     Q = rs.randn(n, n)
     Q = Q.T @ Q
 
@@ -212,7 +213,8 @@ def TEST_classical_newton():
 
     x0 = np.random.rand(n)
 
-    x_list, f_list = minimize_classical_newton(f, x0, epsilon=1e-6, max_iter=10)
+    x_list, f_list = minimize_classical_newton(
+        f, x0, epsilon=1e-6, max_iter=10)
 
     f_min = quadratic.analytic_minimum()
     x_min = quadratic.analytic_minimizer()
@@ -234,7 +236,8 @@ def TEST_newton_exact_line_search():
 
     x0 = np.random.rand(n)
 
-    x_list, f_list = minimize_newton_exact_line_search(f, x0, epsilon=1e-6, max_iter=10)
+    x_list, f_list = minimize_newton_exact_line_search(
+        f, x0, epsilon=1e-6, max_iter=10)
 
     f_min = quadratic.analytic_minimum()
     x_min = quadratic.analytic_minimizer()
@@ -272,7 +275,8 @@ def finite_difference_gradient_alt(f, p, epsilon=0.01):
 
         p_shifted_back[i] -= epsilon
 
-        gradient[i] = (f(*p_shifted_front) - f(*p_shifted_back)) / (2 * epsilon)
+        gradient[i] = (f(*p_shifted_front) -
+                       f(*p_shifted_back)) / (2 * epsilon)
 
     return gradient
 
@@ -425,8 +429,6 @@ def exact_line_search(f, ak, bk, epsilon, alpha=0.618033988749):
 def minimize_newton_exact_line_search(
     f, x0, epsilon, max_iter, ak=0, bk=1e8, line_search_epsilon=1e-4
 ):
-    def gradF(x):
-        return np.array((x[0], 9 * x[1]))
 
     c1, c2 = 0.01, 0.9
     x_list = [x0]
@@ -443,9 +445,11 @@ def minimize_newton_exact_line_search(
         print(f"s: {s}")
         f_line = parametrize_function_line(f, x, s)
 
+        def gradF(x): return finite_difference_gradient(f, x)
         line_search = PowellWolfe(f, gradF, x, s, c1, c2)
         # gamma_min = exact_line_search(f_line, ak, bk,  line_search_epsilon)
         (gamma_min, *_) = line_search.search()
+        print("done with powellwolf")
         print("gamam min", gamma_min)
         x_new = x + gamma_min * s
         f_new = f(x_new)
@@ -471,11 +475,11 @@ if __name__ == "__main__":
     # TEST_rosenbrock()
     # TEST_newton_exact_line_search()
 
-    # def f(x): return rosenbrock(x)
-    def f(x):
-        return 0.5 * x[0] ** 2 + 4.5 * x[1] ** 2
+    def f(x): return rosenbrock(x)
+    # def f(x):
+    #     return 0.5 * x[0] ** 2 + 4.5 * x[1] ** 2
 
-    x0 = np.array([12, 110])
+    x0 = np.array([0, -0.7])
     # x0 = np.random.rand(2)
     # x_list, f_list = minimize_classical_newton(
     #     f, x0, epsilon=1e-6, max_iter=10)
@@ -513,7 +517,8 @@ if __name__ == "__main__":
             Z[j, i] = f(xy)
 
     # def rosenbrockfunction(x, y): return (1-x)**2+100*(y-x**2)**2
-    contour_plot = plt.contour(X, Y, Z, np.logspace(0, 3.5, 10, base=10), cmap="gray")
+    contour_plot = plt.contour(X, Y, Z, np.logspace(
+        0, 3.5, 10, base=10), cmap="gray")
     plt.title("Rosenbrock Function: ")
     plt.xlabel("x")
     plt.ylabel("y")
@@ -523,7 +528,8 @@ if __name__ == "__main__":
 
     # plt.plot(x_list, 'ro')  # ko black, ro red
     plt.plot(x_list[:, 0], x_list[:, 1], "ro")  # ko black, ro red
-    plt.plot(x_list[:, 0], x_list[:, 1], "r:", linewidth=1)  # plot black dotted lines
+    plt.plot(x_list[:, 0], x_list[:, 1], "r:",
+             linewidth=1)  # plot black dotted lines
     plt.title("Steps to find minimum")
     plt.clabel(contour_plot)
 
