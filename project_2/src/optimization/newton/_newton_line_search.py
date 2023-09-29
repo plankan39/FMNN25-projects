@@ -1,7 +1,8 @@
 import numpy as np
-from . import Problem
+from .. import Problem
 from line_search import LineSearch
-from .newton_optimizer import calc_cauchy_diff, calc_residual, NewtonOptimizer
+from ..criterion import calc_cauchy_diff, calc_residual
+from ._newton import NewtonOptimizer
 
 
 class NewtonWithLineSearch(NewtonOptimizer):

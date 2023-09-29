@@ -1,7 +1,8 @@
 from pprint import pprint
 import numpy as np
 from line_search import ExactLineSearch
-from optimization import Problem, NewtonWithLineSearch
+from optimization import Problem
+from optimization.newton import NewtonWithLineSearch 
 from plot_optimization import plot2dOptimization
 
 

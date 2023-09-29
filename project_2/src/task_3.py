@@ -1,6 +1,6 @@
 from pprint import pprint
 import numpy as np
-from optimization import Problem, ClassicalNewton
+from optimization.newton import Problem, ClassicalNewton
 from plot_optimization import plot2dOptimization
 
 

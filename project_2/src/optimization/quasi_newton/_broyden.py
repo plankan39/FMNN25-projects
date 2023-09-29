@@ -2,13 +2,11 @@ import copy
 
 import matplotlib.pyplot as plt
 import numpy as np
+from line_search import LineSearch
 from scipy.optimize import minimize_scalar
 
-from line_search import LineSearch
-from .newton_optimizer import QuasiNewtonOptimizer
-from .problem import Problem
-
-
+from .. import Problem
+from ._quasi_newton import QuasiNewtonOptimizer
 
 
 class Broyden(QuasiNewtonOptimizer):

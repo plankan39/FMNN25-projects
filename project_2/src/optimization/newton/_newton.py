@@ -1,7 +1,15 @@
+from typing import Protocol
 import numpy as np
 
-from .newton_optimizer import calc_cauchy_diff, calc_residual, NewtonOptimizer
-from .problem import Problem
+from ..criterion import calc_cauchy_diff, calc_residual
+from ..problem import Problem
+
+
+class NewtonOptimizer(Protocol):
+    problem: Problem
+
+    def optimize(self, *args):
+        ...
 
 
 class ClassicalNewton(NewtonOptimizer):

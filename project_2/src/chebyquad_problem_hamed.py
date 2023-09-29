@@ -13,8 +13,8 @@ from numpy import array
 from line_search import ExactLineSearch, PowellWolfeScipy
 #from task_3_4 import finite_difference_hessian
 
-from optimization.broyden import Broyden
-from optimization.problem import Problem
+from optimization.quasi_newton import Broyden
+from optimization import Problem
 
 
 def T(x, n):
