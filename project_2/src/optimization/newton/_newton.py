@@ -1,8 +1,8 @@
 from typing import Protocol
+
 import numpy as np
 
-from ..criterion import calc_cauchy_diff, calc_residual
-from ..problem import Problem
+from .. import Problem, calc_cauchy_diff, calc_residual
 
 
 class NewtonOptimizer(Protocol):

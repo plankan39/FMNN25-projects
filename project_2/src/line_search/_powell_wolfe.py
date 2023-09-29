@@ -142,7 +142,7 @@ class PowellWolfeScipy(LineSearch):
         """
 
         alpha, fN, gN, *_ = line_search(
-            self.f, self.gradF, x, direction, amax=u_bound, c1=self.c1, c2=self.c2
+            self.f, self.gradF, x, direction, c1=self.c1, c2=self.c2
         )
         return alpha, fN, gN  # type: ignore
 

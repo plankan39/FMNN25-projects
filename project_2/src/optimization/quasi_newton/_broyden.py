@@ -52,8 +52,9 @@ class Broyden(QuasiNewtonOptimizer):
 
         for _ in range(self.max_iterations):
             s = -np.dot(H, g)
-            alpha, *_ = self.lineSearch.search(x, s, 0, 1e8)
-            alpha = self.line_search(x, s)
+            newAlpha, *_ = self.lineSearch.search(x, s, 0, 1e8)
+            alpha = newAlpha if newAlpha else alpha
+            # alpha = self.line_search(x, s)
             x_next = x + alpha * s
             self.points.append(copy.deepcopy(x_next))
             if self.check_criterion(x, x_next, g):
