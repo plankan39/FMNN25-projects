@@ -1,90 +1,9 @@
 from collections.abc import Callable
-from typing import Protocol
 
 import numpy as np
+from scipy.optimize import line_search
 
-
-class LineSearch(Protocol):
-    """Protocol class for different implementation of line search"""
-
-    f: Callable[[np.ndarray], float]
-
-    def search(self, x: np.ndarray, direction: np.ndarray) -> tuple[float, int]:
-        """Perform line search to find the best step size alpha
-
-        Args:
-            stepSizeInitial (float): the initial stepsize guess
-
-        Returns:
-            float: the optimal step size alpha
-        """
-        ...
-
-
-class ExactLineSearch(LineSearch):
-    def __init__(
-        self,
-        f,
-        ak: float = 0,
-        bk: float = 1e8,
-        epsilon: float = 1e-4,
-    ) -> None:
-        """_summary_
-
-        Args:
-            f (_type_): _description_
-            ak (float): The lower bound of search area
-            bk (float): the upper bound of search area
-            epsilon (float): The tolerance.
-            ak (float, optional): _description_. Defaults to 0.
-            bk (float, optional): _description_. Defaults to 1e8.
-            epsilon (float, optional): _description_. Defaults to 1e-4.
-        """
-        self.f = f
-        self.ak = ak
-        self.bk = bk
-        self.epsilon = epsilon
-
-    def search(
-        self,
-        x: np.ndarray,
-        direction: np.ndarray,
-    ) -> tuple[float, int]:
-        """Perform exact line search
-
-        Args:
-            x (np.ndarray): The current point.
-            direction (np.ndarray): The direction to perform the line search in
-
-
-        Returns:
-            (alpha, fN): where alpha is the step size and fN the number of times
-            f was called
-        """
-        GOLDEN_RATIO = 0.618033988749
-        fN = 0
-
-        def phi(alpha: float) -> float:
-            """
-            The function f linearly parameterized as
-            phi(alpha) = f(x + alpha * direction)
-            """
-            return self.f(x + alpha * direction)
-
-        lb, ub = self.ak, self.bk
-        while abs(ub - lb) > self.epsilon:
-            sigmak = lb + (1 - GOLDEN_RATIO) * (ub - lb)
-            ugmak = lb + GOLDEN_RATIO * (ub - lb)
-
-            # Determine new interval of uncertainty based on function values at sigmak and ugmak
-            # FIXME: here we have one function evaluation too much, can be optimized
-            if phi(sigmak) > phi(ugmak):
-                lb = sigmak
-            else:
-                ub = ugmak
-            fN += 2
-
-        return (ub + lb) / 2, fN
+from ._line_search import LineSearch
 
 
 class PowellWolfe(LineSearch):
@@ -92,7 +11,6 @@ class PowellWolfe(LineSearch):
         self,
         f: Callable[[np.ndarray], float],
         gradF: Callable[[np.ndarray], np.ndarray],
-        stepSizeInitial: float = 2,
         c1: float = 0.01,
         c2: float = 0.9,
     ) -> None:
@@ -109,7 +27,6 @@ class PowellWolfe(LineSearch):
         assert 0 < c1 < 0.5 and c1 < c2 < 1
         self.f = f
         self.gradF = gradF
-        self.stepSizeInitial = stepSizeInitial
         self.c1 = c1
         self.c2 = c2
 
@@ -117,6 +34,8 @@ class PowellWolfe(LineSearch):
         self,
         x: np.ndarray,
         direction: np.ndarray,
+        l_bound: float = 0,
+        u_bound: float = 4,
     ) -> tuple[float, int, int]:
         """Perform line search with PowellWolfe algorithm
 
@@ -146,7 +65,7 @@ class PowellWolfe(LineSearch):
             phi_prime = direction.T.dot(self.gradF(x + alpha * direction))
             return np.abs(phi_prime) <= np.abs(self.c2 * direction.T.dot(gradFX))
 
-        alpha_minus = self.stepSizeInitial
+        alpha_minus = (l_bound + u_bound) / 2
         alpha_plus = alpha_minus
 
         # Find lower and upper bound for alpha that fulfills armijo condition
@@ -176,6 +95,56 @@ class PowellWolfe(LineSearch):
             gN += 1
 
         return alpha_minus, fN, gN
+
+
+class PowellWolfeScipy(LineSearch):
+    def __init__(
+        self,
+        f: Callable[[np.ndarray], float],
+        gradF: Callable[[np.ndarray], np.ndarray],
+        c1: float = 0.01,
+        c2: float = 0.9,
+    ) -> None:
+        """Initiates attributes used to perform the lineSearch
+
+        Args:
+            f (Callable[[np.ndarray], float]): The objective function
+            gradF (Callable[[np.ndarray], np.ndarray]): The gradient of f.
+            stepSizeInitial (float, optional): The initial guess for step size.
+            Defaults to 2.
+            c1 (float): Constant for armijo condition.
+            c2 (float): Constant for wolfe condition
+        """
+        assert 0 < c1 < 0.5 and c1 < c2 < 1
+        self.f = f
+        self.gradF = gradF
+        self.c1 = c1
+        self.c2 = c2
+
+    def search(
+        self,
+        x: np.ndarray,
+        direction: np.ndarray,
+        l_bound: float = 0,
+        u_bound: float = 1e8,
+    ) -> tuple[float, int, int]:
+        """Perform line search with PowellWolfe algorithm
+
+        Args:
+            x (np.ndarray): The current point
+            direction (np.ndarray): A direction that is descending.
+
+
+        Returns:
+            (alpha: float, fN: int, gN: int): where alpha is the step size
+            fN is the number of times f was called and gN is the number of times
+            gradF was called.
+        """
+
+        alpha, fN, gN, *_ = line_search(
+            self.f, self.gradF, x, direction, amax=u_bound, c1=self.c1, c2=self.c2
+        )
+        return alpha, fN, gN  # type: ignore
 
 
 if __name__ == "__main__":

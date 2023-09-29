@@ -10,10 +10,11 @@ Claus Führer (2016)
 from scipy import dot, linspace
 import scipy.optimize as so
 from numpy import array
-from line_search.line_search import ExactLineSearch
+from line_search import ExactLineSearch, PowellWolfeScipy
 #from task_3_4 import finite_difference_hessian
 
-from optimizer.optimizer import Problem, Broyden
+from optimization.broyden import Broyden
+from optimization.problem import Problem
 
 
 def T(x, n):
@@ -76,7 +77,7 @@ def chebyquad(x):
     norm(chebyquad_fcn)**2                
     """
     chq = chebyquad_fcn(x)
-    return dot(chq, chq)
+    return dot(chq, chq) # type: ignore
 
 
 def gradchebyquad(x):
@@ -86,15 +87,15 @@ def gradchebyquad(x):
     chq = chebyquad_fcn(x)
     UM = 4. / len(x) * array([[(i + 1) * U(2. * xj - 1., i)
                                for xj in x] for i in range(len(x) - 1)])
-    return dot(chq[1:].reshape((1, -1)), UM).reshape((-1,))
+    return dot(chq[1:].reshape((1, -1)), UM).reshape((-1,)) # type: ignore
 
 
 if __name__ == '__main__':
-    x = linspace(0, 1, 8)
+    x = linspace(0, 1, 8) # type: ignore
     # should converge after 18 iterations
     xmin = so.fmin_bfgs(chebyquad, x, gradchebyquad)
     print(xmin)
     problem = Problem(chebyquad, gradchebyquad)
-    optimization = Broyden(problem, ExactLineSearch(problem.objective_function))
+    optimization = Broyden(problem, PowellWolfeScipy(problem.objective_function, problem.gradient_function))
     optimization.optimize(x)
     optimization.report()

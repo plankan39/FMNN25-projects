@@ -1,97 +1,14 @@
 import copy
-from collections.abc import Callable
-from typing import Protocol
 
 import matplotlib.pyplot as plt
 import numpy as np
-from finite_difference import finite_difference_gradient, finite_difference_hessian
-from line_search.line_search import LineSearch
 from scipy.optimize import minimize_scalar
 
-
-def calc_residual(gk):
-    return np.linalg.norm(gk)
-
-
-def calc_cauchy_diff(x_k_1, x_k):
-    return np.linalg.norm(x_k_1 - x_k)
+from line_search import LineSearch
+from .newton_optimizer import QuasiNewtonOptimizer
+from .problem import Problem
 
 
-class Problem:
-    """
-    Initialize a problem for optimization.
-
-    Parameters:
-    - objective_function: The objective function to be minimized.
-    - gradient_function: (Optional) The gradient function of the objective function.
-    """
-
-    def __init__(
-        self,
-        objective_function: Callable[[np.ndarray], float],
-        gradient_function: Callable[[np.ndarray], np.ndarray] | None = None,
-        hessian_function: Callable[[np.ndarray], np.ndarray] | None = None,
-    ) -> None:
-        self.objective_function = objective_function
-        self.gradient_function = (
-            gradient_function
-            if gradient_function
-            else lambda x: finite_difference_gradient(objective_function, x, 1e-6)
-        )
-        self.hessian_function = (
-            hessian_function
-            if hessian_function
-            else lambda x: finite_difference_hessian(x, objective_function)
-        )
-
-
-class NewtonOptimizer(Protocol):
-    problem: Problem
-
-    def optimize(self, *args):
-        ...
-
-
-class QuasiNewtonOptimizer(Protocol):
-    problem: Problem
-    lineSearch: LineSearch
-
-    def optimize(self, *args):
-        ...
-
-
-class ClassicalNewton(NewtonOptimizer):
-    def __init__(self, problem: Problem) -> None:
-        self.problem = problem
-
-    def optimize(self, x0: np.ndarray, epsilon: float = 1e-4, max_iter: int = 100):
-        f = self.problem.objective_function
-        gradF = self.problem.gradient_function
-        hessF = self.problem.hessian_function
-
-        x_list = [x0]
-        f_list = [f(x0)]
-        x_new = x0
-        for _ in range(max_iter):
-            x = x_new
-            Ginv = np.linalg.inv(hessF(x))
-            g = gradF(x)
-            s = -Ginv @ g  # newton direction
-            x_new = x + s
-            f_new = f(x_new)
-
-            x_list.append(x_new)
-            f_list.append(f_new)
-
-            residual = calc_residual(g)
-            cauchy = calc_cauchy_diff(x_new, x)
-            if residual < epsilon or cauchy < epsilon:
-                # print(f"residual {residual}")
-                # print(f"cauchy {cauchy }")
-                break
-
-                # x_new = HESSIAN, GRADIENT)
-        return x_list, f_list
 
 
 class Broyden(QuasiNewtonOptimizer):
@@ -137,7 +54,7 @@ class Broyden(QuasiNewtonOptimizer):
 
         for _ in range(self.max_iterations):
             s = -np.dot(H, g)
-            alpha, *_ = self.lineSearch.search(x, s)
+            alpha, *_ = self.lineSearch.search(x, s, 0, 1e8)
             alpha = self.line_search(x, s)
             x_next = x + alpha * s
             self.points.append(copy.deepcopy(x_next))
@@ -152,7 +69,7 @@ class Broyden(QuasiNewtonOptimizer):
             x = copy.deepcopy(x_next)
 
         self.x = x_next
-        self.g = g_next
+        self.g = g_next  # type: ignore
         return self.x
 
     def check_criterion(self, x, x_next, g):
@@ -170,7 +87,6 @@ class Broyden(QuasiNewtonOptimizer):
         return (np.linalg.norm(x_next - x) < self.cauchy_criterion) or (
             np.linalg.norm(g) < self.residual_criterion
         )
-
 
     def line_search(self, x, s):
         """
@@ -192,7 +108,6 @@ class Broyden(QuasiNewtonOptimizer):
             return minimize_search.x
         else:
             raise Exception("Exact line search failed to converge.")
-
 
     def report(self):
         """
@@ -250,9 +165,9 @@ class Broyden(QuasiNewtonOptimizer):
         x = np.linspace(min_range[0], max_range[0], range_steps[0])
         y = np.linspace(min_range[1], max_range[1], range_steps[1])
         x, y = np.meshgrid(x, y)
-        Z = self.problem.objective_function([x, y])
+        Z = self.problem.objective_function([x, y])  # type: ignore
         levels = np.hstack(
-            (np.arange(Z.min() - 1, 5, 2), np.arange(5, Z.max() + 1, 50))
+            (np.arange(Z.min() - 1, 5, 2), np.arange(5, Z.max() + 1, 50))  # type: ignore
         )
 
         plt.figure(figsize=(8, 6))
