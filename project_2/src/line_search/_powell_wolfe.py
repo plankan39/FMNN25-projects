@@ -3,7 +3,7 @@ from collections.abc import Callable
 import numpy as np
 import scipy
 
-from ._line_search import LineSearch
+from line_search import LineSearch
 
 
 class PowellWolfe(LineSearch):
@@ -35,7 +35,7 @@ class PowellWolfe(LineSearch):
         x: np.ndarray,
         direction: np.ndarray,
         l_bound: float = 0,
-        u_bound: float = 4,
+        u_bound: float = 1e5,
     ) -> tuple[float, int, int]:
         """Perform line search with PowellWolfe algorithm
 
@@ -69,9 +69,11 @@ class PowellWolfe(LineSearch):
                 print(f"{np.abs(phi_prime)} <= {-self.c2 * direction.T.dot(gradFX)}")
                 print(f"{np.abs(phi_prime) <= -self.c2 * direction.T.dot(gradFX)}")
 
-            return np.abs(phi_prime) <= -self.c2 * direction.T.dot(gradFX)
+            return np.abs(phi_prime) >= self.c2 * direction.T.dot(gradFX)
 
-        alpha_minus = fX
+        # NOTE(benja): why do we do this, please explain?
+        # alpha_minus = fX
+        alpha_minus = 1
         print(f"lb={l_bound}, ub={u_bound}, alpha- = {alpha_minus}")
         alpha_plus = alpha_minus
 
@@ -93,6 +95,7 @@ class PowellWolfe(LineSearch):
         print(
             f"\n\n###################################\nx = {x}\ndir = {direction}\n###################################\n"
         )
+
         # Find a value between the bounds that fulfills the second condition
         gN += 1
         while not wolfe(alpha_minus):
@@ -101,6 +104,80 @@ class PowellWolfe(LineSearch):
                 print(f"lb: {alpha_minus}, ub: {alpha_plus}, a0: {alpha_0}")
                 print(f"f(a0)={self.f(x + alpha_0 * direction)}\n")
             if armijo(alpha_0):
+                alpha_minus = alpha_0
+            else:
+                alpha_plus = alpha_0
+            fN += 1
+            gN += 1
+
+        return alpha_minus, fN, gN
+
+
+class PowellWolfeBenja(LineSearch):
+    def __init__(
+        self,
+        f: Callable[[np.ndarray], float],
+        f_grad: Callable[[np.ndarray], np.ndarray],
+        c1: float = 0.01,
+        c2: float = 0.9,
+    ) -> None:
+        """Initiates attributes used to perform the lineSearch
+
+        Args:
+            f (Callable[[np.ndarray], float]): The objective function
+            gradF (Callable[[np.ndarray], np.ndarray]): The gradient of f.
+            stepSizeInitial (float, optional): The initial guess for step size.
+            Defaults to 2.
+            c1 (float): Constant for armijo condition.
+            c2 (float): Constant for wolfe condition
+        """
+        assert 0 < c1 < 0.5 and c1 < c2 < 1
+        self.f = f
+        self.f_grad = f_grad
+        self.c1 = c1
+        self.c2 = c2
+
+    def armijo(self, f, x, alpha, direction, fx, gx, c1) -> bool:
+        res = f(x + alpha * direction) <= fx + \
+            c1*alpha*gx.T @ direction
+        return res
+
+    def wolfe(self, f, f_grad, x, alpha, direction, fx, gx, c2) -> bool:
+        res = f_grad(x + alpha*direction).T @ direction >= c2*gx.T@direction
+        return res
+
+    def search(
+        self,
+        x: np.ndarray,
+        direction: np.ndarray,
+        l_bound: float = 0,
+        u_bound: float = 1e5,
+    ) -> tuple[float, int, int]:
+
+        fx = self.f(x)
+        grad_fx = self.f_grad(x)
+        fN = 1
+        gN = 1
+
+        # NOTE(benja): starting with 2 instead of 1 gets stuck on rosenbrock for some reason?!?!?!
+        alpha_minus = 1
+        fN += 1
+        while not self.armijo(self.f, x, alpha_minus, direction, fx, grad_fx, self.c1):
+            fN += 1
+            alpha_minus /= 2
+
+        alpha_plus = alpha_minus
+
+        fN += 1
+        while self.armijo(self.f, x, alpha_plus, direction, fx, grad_fx, self.c1):
+            alpha_plus *= 2
+
+        # Find a value between the bounds that fulfills the second condition
+        gN += 1
+        # print(alpha_minus, alpha_plus, direction)
+        while not self.wolfe(self.f, self.f_grad, x, alpha_minus, direction, fx, grad_fx, self.c2):
+            alpha_0 = (alpha_plus + alpha_minus) / 2
+            if self.armijo(self.f, x, alpha_0, direction, fx, grad_fx, self.c1):
                 alpha_minus = alpha_0
             else:
                 alpha_plus = alpha_0
@@ -139,7 +216,7 @@ class PowellWolfeScipy(LineSearch):
         x: np.ndarray,
         direction: np.ndarray,
         l_bound: float = 0,
-        u_bound: float = 1e8,
+        u_bound: float = 1e5,
     ) -> tuple[float, int, int]:
         """Perform line search with PowellWolfe algorithm
 
@@ -161,7 +238,7 @@ class PowellWolfeScipy(LineSearch):
 
 
 if __name__ == "__main__":
-    from scipy.optimize import line_search
+    from scipy.optimize import line_search as line_search_scipy
 
     def f(x):
         return 0.5 * x[0] ** 2 + 4.5 * x[1] ** 2
@@ -176,11 +253,11 @@ if __name__ == "__main__":
     c2 = 0.9
 
     print("\nResults:")
-    res = line_search(f, gradF, x_0, d_0, c1=c1, c2=c2)
+    res = line_search_scipy(f, gradF, x_0, d_0, c1=c1, c2=c2)
     print(f"  scipy: alpha = {res[0]}, fn = {res[1]}, gn = {res[2]}")
 
-    ls = PowellWolfe(f, gradF)
-    a, fn, gn = ls.search(x_0, d_0)
+    line_search = PowellWolfe(f, gradF)
+    a, fn, gn = line_search.search(x_0, d_0)
     print(f"  PowellWolfe: alpha = {a}, fn = {fn}, gn = {gn}")
 
     print("\nCalculations:")

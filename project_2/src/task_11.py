@@ -1,5 +1,5 @@
 from scipy import optimize as scipy_optimize
-from line_search import ExactLineSearch, PowellWolfeScipy
+import line_search as LineSearch
 import numpy as np
 from optimization import Problem
 from optimization.quasi_newton._bfgs import BFGS
@@ -8,15 +8,7 @@ import chebyquad_problem
 
 if __name__ == "__main__":
 
-    f = chebyquad_problem.chebyquad
-    f_grad = chebyquad_problem.gradchebyquad
-
-    # parameters
-    g_tol = 1e-5
-    x_tol = 0
-    norm_ord = 2
-    max_iter = 500
-
+    # starting points
     X0 = [
         np.array([0.42951458, 0.26069987, 0.24245167, 0.78074889]),
 
@@ -27,8 +19,17 @@ if __name__ == "__main__":
                   0.15908466, 0.61995692, 0.10240036, 0.85029983,
                   0.5542435, 0.47892635, 0.53911505]),
     ]
-
     N = [4, 8, 11]
+
+    f = chebyquad_problem.chebyquad
+    f_grad = chebyquad_problem.gradchebyquad
+
+    # parameters for optimisation used by both scipy and ours
+    g_tol = 1e-5
+    x_tol = 0
+    norm_ord = 2
+    max_iter = 500
+
     print("Scipy and ours BFGS comparison chebyquad")
     print("="*50)
     for x0, n in zip(X0, N):
@@ -40,10 +41,10 @@ if __name__ == "__main__":
         problem = Problem(chebyquad_problem.chebyquad,
                           chebyquad_problem.gradchebyquad)
 
-        line_seach = PowellWolfeScipy(problem.objective_function,
-                                      problem.gradient_function)
-        # ls = PowellWolfeScipy(problem.objective_function, problem.gradient_function)
-        # ls = ExactLineSearch(problem.objective_function)
+        # line_seach_scipy = LineSearch.PowellWolfeScipy(problem.objective_function,
+        #                                                problem.gradient_function)
+        line_seach = LineSearch.PowellWolfeBenja(problem.objective_function,
+                                                 problem.gradient_function)
         optimization = BFGS(problem, line_seach,
                             max_iterations=max_iter, g_tol=g_tol, x_tol=x_tol)
         optimization.optimize(x0)
