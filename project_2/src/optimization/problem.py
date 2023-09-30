@@ -16,18 +16,18 @@ class Problem:
 
     def __init__(
         self,
-        objective_function: Callable[[np.ndarray], float],
-        gradient_function: Callable[[np.ndarray], np.ndarray] | None = None,
-        hessian_function: Callable[[np.ndarray], np.ndarray] | None = None,
+        f: Callable[[np.ndarray], float],
+        f_grad: Callable[[np.ndarray], np.ndarray] | None = None,
+        f_hess: Callable[[np.ndarray], np.ndarray] | None = None,
     ) -> None:
-        self.objective_function = objective_function
+        self.objective_function = f
         self.gradient_function = (
-            gradient_function
-            if gradient_function
-            else lambda x: finite_difference_gradient(objective_function, x, 1e-8)
+            f_grad
+            if f_grad
+            else lambda x: finite_difference_gradient(f, x, 1e-6)
         )
         self.hessian_function = (
-            hessian_function
-            if hessian_function
-            else lambda x: finite_difference_hessian(x, objective_function)
+            f_hess
+            if f_hess
+            else lambda x: finite_difference_hessian(x, f)
         )
