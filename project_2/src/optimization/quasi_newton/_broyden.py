@@ -5,15 +5,15 @@ import numpy as np
 from line_search import LineSearch
 from scipy.optimize import minimize_scalar
 
-from .. import Problem
 from ._quasi_newton import QuasiNewtonOptimizer
+from optimization import Problem
 
 
 class Broyden(QuasiNewtonOptimizer):
     def __init__(
         self,
         problem: Problem,
-        lineSearch: LineSearch,
+        line_search: LineSearch,
         residual_criterion: float = 1e-10,
         cauchy_criterion: float = 1e-10,
         max_iterations: int = 500,
@@ -28,7 +28,7 @@ class Broyden(QuasiNewtonOptimizer):
         - max_iterations: The maximum number of iterations for the solver.
         """
         self.problem = problem
-        self.lineSearch = lineSearch
+        self.line_search = line_search
         self.residual_criterion = residual_criterion
         self.cauchy_criterion = cauchy_criterion
         self.max_iterations = max_iterations if max_iterations > 0 else 100000
@@ -52,7 +52,7 @@ class Broyden(QuasiNewtonOptimizer):
 
         for _ in range(self.max_iterations):
             s = -np.dot(H, g)
-            newAlpha, *_ = self.lineSearch.search(x, s, 0, 1e8)
+            newAlpha, *_ = self.line_search.search(x, s, 0, 1e8)
             alpha = newAlpha if newAlpha else alpha
             # alpha = self.line_search(x, s)
             x_next = x + alpha * s
@@ -116,7 +116,8 @@ class Broyden(QuasiNewtonOptimizer):
             print("Optimization Successful!")
             print("Optimal Solution:")
             print("x =", self.x)
-            print("Objective Function Value =", self.problem.objective_function(self.x))
+            print("Objective Function Value =",
+                  self.problem.objective_function(self.x))
             print("Number of Iterations =", len(self.points) - 1)
         else:
             print("Optimization Failed!")
@@ -166,7 +167,8 @@ class Broyden(QuasiNewtonOptimizer):
         x, y = np.meshgrid(x, y)
         Z = self.problem.objective_function([x, y])  # type: ignore
         levels = np.hstack(
-            (np.arange(Z.min() - 1, 5, 2), np.arange(5, Z.max() + 1, 50))  # type: ignore
+            (np.arange(Z.min() - 1, 5, 2),
+             np.arange(5, Z.max() + 1, 50))  # type: ignore
         )
 
         plt.figure(figsize=(8, 6))
