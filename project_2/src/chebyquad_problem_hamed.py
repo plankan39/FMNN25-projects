@@ -103,6 +103,7 @@ if __name__ == "__main__":
     print(xmin)
     problem = Problem(chebyquad, gradchebyquad)
     ls = PowellWolfeScipy(problem.objective_function, problem.gradient_function)
+    # ls = PowellWolfeScipy(problem.objective_function, problem.gradient_function)
     # ls = ExactLineSearch(problem.objective_function)
     optimization = Broyden(problem, ls)
     optimization.optimize(x)

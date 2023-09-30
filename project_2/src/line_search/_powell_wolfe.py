@@ -63,9 +63,16 @@ class PowellWolfe(LineSearch):
         def wolfe(alpha: float) -> bool:
             """Checks the second Powell-Wolfe condition"""
             phi_prime = direction.T.dot(self.gradF(x + alpha * direction))
-            return np.abs(phi_prime) <= np.abs(self.c2 * direction.T.dot(gradFX))
+            if fN <= 10:
+                print(f"phi(0) = {gradFX}")
+                print(f"phi(a) = {phi_prime}")
+                print(f"{np.abs(phi_prime)} <= {-self.c2 * direction.T.dot(gradFX)}")
+                print(f"{np.abs(phi_prime) <= -self.c2 * direction.T.dot(gradFX)}")
 
-        alpha_minus = (l_bound + u_bound) / 2
+            return np.abs(phi_prime) <= -self.c2 * direction.T.dot(gradFX)
+
+        alpha_minus = fX
+        print(f"lb={l_bound}, ub={u_bound}, alpha- = {alpha_minus}")
         alpha_plus = alpha_minus
 
         # Find lower and upper bound for alpha that fulfills armijo condition
@@ -82,11 +89,17 @@ class PowellWolfe(LineSearch):
         fN += 1
         while armijo(alpha_plus):
             alpha_plus *= 2
-
+            print(f"alpha+={alpha_plus}")
+        print(
+            f"\n\n###################################\nx = {x}\ndir = {direction}\n###################################\n"
+        )
         # Find a value between the bounds that fulfills the second condition
         gN += 1
         while not wolfe(alpha_minus):
             alpha_0 = (alpha_plus + alpha_minus) / 2
+            if fN <= 10:
+                print(f"lb: {alpha_minus}, ub: {alpha_plus}, a0: {alpha_0}")
+                print(f"f(a0)={self.f(x + alpha_0 * direction)}\n")
             if armijo(alpha_0):
                 alpha_minus = alpha_0
             else:
