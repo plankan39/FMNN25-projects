@@ -1,7 +1,7 @@
 from collections.abc import Callable
 
 import numpy as np
-from scipy.optimize import line_search
+import scipy
 
 from ._line_search import LineSearch
 
@@ -154,7 +154,7 @@ class PowellWolfeScipy(LineSearch):
             gradF was called.
         """
 
-        alpha, fN, gN, *_ = line_search(
+        alpha, fN, gN, *_ = scipy.optimize.line_search(
             self.f, self.gradF, x, direction, c1=self.c1, c2=self.c2
         )
         return alpha, fN, gN  # type: ignore

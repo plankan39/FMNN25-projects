@@ -14,8 +14,8 @@ class BFGS(QuasiNewtonOptimizer):
         self,
         problem: Problem,
         line_search: LineSearch,
-        residual_criterion: float = 1e-10,
-        cauchy_criterion: float = 0,
+        g_tol: float = 1e-10,
+        x_tol: float = 0,
         max_iterations: int = 500,
     ):
         """
@@ -29,11 +29,12 @@ class BFGS(QuasiNewtonOptimizer):
         """
         self.problem = problem
         self.line_search = line_search
-        self.residual_criterion = residual_criterion
-        self.cauchy_criterion = cauchy_criterion
+        self.g_tol = g_tol
+        self.x_tol = x_tol
         self.max_iterations = max_iterations if max_iterations > 0 else 100000
         self.points = []  # Store optimization path
         self.success = False  # Flag indicating whether optimization succeeded
+        self.xmin = None
 
     def optimize(self, x0):
         """
@@ -45,7 +46,7 @@ class BFGS(QuasiNewtonOptimizer):
         Returns:
         - The optimized solution.
         """
-        n = x.shape[0]
+        n = x0.shape[0]
         xnew = x0
         gnew = self.problem.gradient_function(x0)
         Hnew = np.eye(n)
@@ -66,24 +67,25 @@ class BFGS(QuasiNewtonOptimizer):
             self.points.append(copy.deepcopy(xnew))
             if self.check_criterion(x, xnew, g):
                 self.success = True
+                self.xmin = xnew
                 break
 
-        return self.x
+        return xnew
 
-    def check_criterion(self, x, x_next, g):
+    def check_criterion(self, x, xnew, g):
         """
         Check termination criteria for the optimization.
 
+        xnew: current point
+        x: previous point
+
         Parameters:
-        - x: Current solution.
-        - x_next: Next solution.
-        - g: Gradient at the current solution.
 
         Returns:
         - True if any of the termination criteria are met, otherwise False.
         """
-        return (np.linalg.norm(x_next - x) < self.cauchy_criterion) or (
-            np.linalg.norm(g) < self.residual_criterion
+        return (np.linalg.norm(xnew - x) < self.x_tol) or (
+            np.linalg.norm(g) < self.g_tol
         )
 
     def line_search(self, x, s):
@@ -114,9 +116,9 @@ class BFGS(QuasiNewtonOptimizer):
         if self.success:
             print("Optimization Successful!")
             print("Optimal Solution:")
-            print("x =", self.x)
+            print("xmin =", self.xmin)
             print("Objective Function Value =",
-                  self.problem.objective_function(self.x))
+                  self.problem.objective_function(self.xmin))
             print("Number of Iterations =", len(self.points) - 1)
         else:
             print("Optimization Failed!")
@@ -138,13 +140,13 @@ class BFGS(QuasiNewtonOptimizer):
 
         d = xnew - x
         y = gnew-g
-        d = np.reshape(d, (d.shape[0], 0))
-        y = np.reshape(y, (y.shape[0], 0))
+        d = np.reshape(d, (d.shape[0], 1))
+        y = np.reshape(y, (y.shape[0], 1))
 
         dTy = d.T@y
         dyT = d@y.T
 
-        Hnew = H + (1 + (y.T@H@y)/dTy) @ (d@d.T) / \
+        Hnew = H + (1 + (y.T@H@y)/dTy) * (d@d.T) / \
             dTy - (dyT@H + H@y@d.T)/(dTy)
 
         return Hnew
