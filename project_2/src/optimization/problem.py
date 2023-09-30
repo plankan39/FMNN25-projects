@@ -24,7 +24,7 @@ class Problem:
         self.gradient_function = (
             gradient_function
             if gradient_function
-            else lambda x: finite_difference_gradient(objective_function, x, 1e-6)
+            else lambda x: finite_difference_gradient(objective_function, x, 1e-8)
         )
         self.hessian_function = (
             hessian_function

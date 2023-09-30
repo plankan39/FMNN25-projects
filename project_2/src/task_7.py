@@ -1,7 +1,7 @@
 from pprint import pprint
 
 import numpy as np
-from line_search import PowellWolfeScipy
+from line_search import PowellWolfeScipy, PowellWolfe
 from optimization import Problem
 from optimization.newton import NewtonWithLineSearch
 from plot_optimization import plot2dOptimization
@@ -13,7 +13,7 @@ def rosenbrock(x):
 
 if __name__ == "__main__":
     problem = Problem(rosenbrock)
-    powellWolfeLineSearch = PowellWolfeScipy(
+    powellWolfeLineSearch = PowellWolfe(
         problem.objective_function, problem.gradient_function
     )
     optimizer = NewtonWithLineSearch(problem, powellWolfeLineSearch)
