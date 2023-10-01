@@ -39,3 +39,23 @@ def finite_difference_hessian(x, f, h=0.1):
                 hessian[i, j] = df
                 hessian[j, i] = df
     return hessian
+
+
+def finite_difference_gradient(f, x, h=1e-6):
+    """
+    based on formulas from (Abramowitz and Stegun 1972) in
+    https://www.sfu.ca/sasdoc/sashtml/iml/chap11/sect8.htm
+    """
+
+    n = x.shape[0]
+
+    gradient = np.zeros_like(x)
+    E = np.eye(n)
+    hi = h
+    for i in range(n):
+        ei = E[:, i]
+        f1 = f(x + hi * ei)
+        f2 = f(x - hi * ei)
+        df = (f1 - f2) / (2 * hi)
+        gradient[i] = df
+    return gradient

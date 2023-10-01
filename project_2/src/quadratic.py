@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import optimize
+from finite_difference import finite_difference_hessian
 
 
 class f_quadratic:
@@ -71,4 +72,20 @@ def TEST_quadratic_minimum():
     print(
         "diff between analytic solution and scipys bfgs solver solution",
         np.linalg.norm(x_scipy - x_analytic),
+    )
+
+
+def TEST_hessian_on_quadratic():
+    "quick test on quadratic function to see if Hessian estimation is accurate"
+    n = 10
+    (Q, q) = positive_definite_quadratic_data(n, seed=False)
+    f = f_quadratic(Q, q, n)
+    x = np.random.rand(n)
+
+    h = 0.1
+    G = Q
+    G_approx = finite_difference_hessian(x, f.eval, h)
+    print(
+        "L2 of difference between true hessian and approximated hessian of quadratic: \n",
+        np.linalg.norm(G - G_approx, ord=2),
     )

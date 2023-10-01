@@ -1,9 +1,32 @@
 from collections.abc import Callable
+from typing import Protocol
 
 import numpy as np
+
 import scipy
 
-from line_search import LineSearch
+
+class LineSearch(Protocol):
+    """Protocol class for different implementation of line search"""
+
+    f: Callable[[np.ndarray], float]
+
+    def search(
+        self,
+        x: np.ndarray,
+        direction: np.ndarray,
+        l_bound: float = 0,
+        u_bound: float = 1e5,
+    ) -> tuple[float, int]:
+        """Perform line search to find the best step size alpha
+
+        Args:
+            stepSizeInitial (float): the initial stepsize guess
+
+        Returns:
+            float: the optimal step size alpha
+        """
+        ...
 
 
 class PowellWolfe(LineSearch):
@@ -276,36 +299,64 @@ class Identity(LineSearch):
         return 1, 0, 0
 
 
-if __name__ == "__main__":
-    from scipy.optimize import line_search as line_search_scipy
+class ExactLineSearch(LineSearch):
+    def __init__(
+        self,
+        f: Callable,
+        epsilon: float = 1e-5,
+        u_bound: float = 1e5,
+    ) -> None:
+        """_summary_
 
-    def f(x):
-        return 0.5 * x[0] ** 2 + 4.5 * x[1] ** 2
+        Args:
+            f (_type_): _description_
+            ak (float): The lower bound of search area
+            bk (float): the upper bound of search area
+            epsilon (float): The tolerance.
+            ak (float, optional): _description_. Defaults to 0.
+            bk (float, optional): _description_. Defaults to 1e8.
+            epsilon (float, optional): _description_. Defaults to 1e-4.
+        """
+        self.f = f
+        self.epsilon = epsilon
+        self.u_bound = u_bound
 
-    def gradF(x):
-        return np.array((x[0], 9 * x[1]))
+    def search(
+        self, x: np.ndarray, direction: np.ndarray, l_bound: float = 0, u_bound: float = 1e5
+    ) -> tuple[float, int]:
+        u_bound = self.u_bound
+        """Perform exact line search
 
-    x_0 = np.array([12, 110])
-    d_0 = np.array([-1, -1])
+        Args:
+            x (np.ndarray): The current point.
+            direction (np.ndarray): The direction to perform the line search in
 
-    c1 = 0.01
-    c2 = 0.9
 
-    print("\nResults:")
-    res = line_search_scipy(f, gradF, x_0, d_0, c1=c1, c2=c2)
-    print(f"  scipy: alpha = {res[0]}, fn = {res[1]}, gn = {res[2]}")
+        Returns:
+            (alpha, fN): where alpha is the step size and fN the number of times
+            f was called
+        """
+        GOLDEN_RATIO = 0.618033988749
+        fN = 0
 
-    line_search = PowellWolfe(f, gradF)
-    a, fn, gn = line_search.search(x_0, d_0)
-    print(f"  PowellWolfe: alpha = {a}, fn = {fn}, gn = {gn}")
+        def phi(alpha: float) -> float:
+            """
+            The function f linearly parameterized as
+            phi(alpha) = f(x + alpha * direction)
+            """
+            return self.f(x + alpha * direction)
 
-    print("\nCalculations:")
-    print(f"  f(x) = {f(x_0)}")
-    print(f"  f(x + a*d) = {f(x_0+ a * d_0)}")
-    print(f"  f(x) + c1*a*d@f(x) = {f(x_0) + c1*a*d_0.T.dot(gradF(x_0))}")
-    print(f"  gradF(x) = {gradF(x_0)}")
-    print(f"  gradF(x + a*d) = {gradF(x_0+ a * d_0)}")
-    print(f"  -d*gradF(x + ad) = {-d_0.T.dot(gradF(x_0+ a * d_0))}")
-    print(f"  -c2*d*gradF(x) = {-c2*d_0.T.dot(gradF(x_0))}")
-    print(f"  {f(x_0+ a * d_0)} <= {f(x_0) + c1*a*d_0.dot(gradF(x_0))}")
-    print(f"  {-d_0.T.dot(gradF(x_0+ a * d_0))} <= {-c2*d_0.T.dot(gradF(x_0))}")
+        lb, ub = l_bound, u_bound
+        while abs(ub - lb) > self.epsilon:
+            sigmak = lb + (1 - GOLDEN_RATIO) * (ub - lb)
+            ugmak = lb + GOLDEN_RATIO * (ub - lb)
+
+            # Determine new interval of uncertainty based on function values at sigmak and ugmak
+            # FIXME: here we have one function evaluation too much, can be optimized
+            if phi(sigmak) > phi(ugmak):
+                lb = sigmak
+            else:
+                ub = ugmak
+            fN += 2
+
+        return (ub + lb) / 2, fN
