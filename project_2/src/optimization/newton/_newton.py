@@ -24,10 +24,19 @@ class ClassicalNewton(NewtonOptimizer):
         x_list = [x0]
         f_list = [f(x0)]
         x_new = x0
+
+        H = self.problem.hessian_function(x0)
+        H2 = hessF(x0)
+        print(H, "old")
+        print(H, "old")
+        exit()
         for _ in range(max_iter):
             x = x_new
             Ginv = np.linalg.inv(hessF(x))
             g = gradF(x)
+            print("old", g)
+            print(Ginv)
+            exit()
             s = -Ginv @ g  # newton direction
             x_new = x + s
             f_new = f(x_new)

@@ -9,12 +9,6 @@ from ._quasi_newton import QuasiNewtonOptimizer
 from optimization import Problem
 
 
-class _H_G_upate():
-    def __init__(self, update_rule="bfgs"):
-        if update_rule == "bfgs":
-            self.
-
-
 class BFGS(QuasiNewtonOptimizer):
     def __init__(
         self,

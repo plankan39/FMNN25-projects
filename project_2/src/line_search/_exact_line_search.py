@@ -9,7 +9,8 @@ class ExactLineSearch(LineSearch):
     def __init__(
         self,
         f: Callable,
-        epsilon: float = 1e-4,
+        epsilon: float = 1e-5,
+        u_bound: float = 1e5,
     ) -> None:
         """_summary_
 
@@ -24,10 +25,12 @@ class ExactLineSearch(LineSearch):
         """
         self.f = f
         self.epsilon = epsilon
+        self.u_bound = u_bound
 
     def search(
-        self, x: np.ndarray, direction: np.ndarray, l_bound: float, u_bound: float
+        self, x: np.ndarray, direction: np.ndarray, l_bound: float = 0, u_bound: float = 1e5
     ) -> tuple[float, int]:
+        u_bound = self.u_bound
         """Perform exact line search
 
         Args:

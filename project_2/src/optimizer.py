@@ -47,20 +47,20 @@ class Optimizer:
         xnew = x0
         gnew = self.problem.gradient_function(x0)
         Hnew = np.eye(n)
+        Hnew = np.linalg.inv(self.problem.hessian_function(x0))
 
         x_list = [xnew]
 
-        for _ in range(self.max_iterations):
+        for i in range(self.max_iterations):
             x = xnew
             g = gnew
             H = Hnew
-
             s = -H @ g
             alpha, *_ = self.line_search.search(x, s)
 
             xnew = x + alpha * s
             gnew = self.problem.gradient_function(xnew)
-            H_new = self.calculate_H(H, gnew, g, xnew, x)
+            Hnew = self.calculate_H(H, gnew, g, xnew, x)
 
             if self.check_criterion(x, xnew, g):
                 self.success = True
@@ -101,7 +101,7 @@ class Optimizer:
 
     def calculate_H(self, H, gnew, g, xnew, x):
         """
-        Update the Hessian matrix using the BFGS update formula.
+        Update the Hessian matrix according to the formula specified by our problem
 
         Parameters:
         - H: The current approximation of the inverse Hessian
@@ -115,16 +115,8 @@ class Optimizer:
         - The updated H and G matrices.
         """
 
-        d = xnew - x
-        y = gnew - g
-        d = np.reshape(d, (d.shape[0], 1))
-        y = np.reshape(y, (y.shape[0], 1))
-
-        dTy = d.T@y
-        dyT = d@y.T
-
-        Hnew = H + (1 + (y.T@H@y)/dTy) * (d@d.T) / \
-            dTy - (dyT@H + H@y@d.T)/(dTy)
+        Gnew = self.problem.hessian_function(xnew)
+        Hnew = np.linalg.inv(Gnew)
 
         return Hnew
 
@@ -178,11 +170,6 @@ class ClassicalNewton(Optimizer):
             max_iterations,
         )
 
-    def calculate_H(self, H, gnew, g, xnew, x):
-        Gnew = self.problem.hessian_function(xnew)
-        Hnew = np.linalg.inv(Gnew)
-        return Hnew
-
 
 class GoodBroyden(Optimizer):
     def calculate_H(self, H, gnew, g, xnew, x):
@@ -221,7 +208,7 @@ class BadBroyden(Optimizer):
         return Hnew
 
 
-class SymmetricBryden(Optimizer):
+class SymmetricBroyden(Optimizer):
     def calculate_H(self, H, gnew, g, xnew, x):
         d = xnew - x
         y = gnew-g

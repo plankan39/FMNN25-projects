@@ -21,7 +21,7 @@ def finite_difference_gradient_alt(f, p, epsilon=0.01):
     return gradient
 
 
-def finite_difference_gradient(f, x, h=1e-6):
+def finite_difference_gradient(f, x, h=0.01):
     """
     based on formulas from (Abramowitz and Stegun 1972) in
     https://www.sfu.ca/sasdoc/sashtml/iml/chap11/sect8.htm

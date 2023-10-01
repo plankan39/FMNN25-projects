@@ -1,9 +1,8 @@
 from pprint import pprint
 import numpy as np
-from optimizer import ClassicalNewton
 from optimization import Problem
+from optimizer import ClassicalNewton
 from plot_optimization import plot2dOptimization
-from line_search import ExactLineSearch
 
 
 def rosenbrock(x):
@@ -20,12 +19,11 @@ if __name__ == "__main__":
 
     optimizer = ClassicalNewton(
         problem, g_tol=g_tol, x_tol=1e-5, max_iterations=max_iter)
-    # line_search = ExactLineSearch()
 
     x0 = np.array([0, -0.7])
     x_list = optimizer.optimize(x0)
     print(len(x_list))
     x_min = x_list[-1]
-    pprint(x_min)
+    pprint(x_list)
 
-    # plot2dOptimization(problem.objective_function, x_list)
+    plot2dOptimization(problem.objective_function, x_list)

@@ -160,7 +160,8 @@ class PowellWolfeBenja(LineSearch):
         gN = 1
 
         # NOTE(benja): starting with 2 instead of 1 gets stuck on rosenbrock for some reason?!?!?!
-        alpha_minus = 1
+        alpha_minus = 2
+        alpha_minus /= 2
         fN += 1
         while not self.armijo(self.f, x, alpha_minus, direction, fx, grad_fx, self.c1):
             fN += 1
