@@ -2,7 +2,7 @@ from pprint import pprint
 import numpy as np
 from line_search import ExactLineSearch
 from optimization import Problem
-from optimization.newton import NewtonWithLineSearch 
+from optimization.newton import NewtonWithLineSearch
 from plot_optimization import plot2dOptimization
 
 
@@ -16,8 +16,7 @@ if __name__ == "__main__":
     optimizer = NewtonWithLineSearch(problem, exactLineSearch)
 
     x0 = np.array([0, -0.7])
-    x_min, f_min = optimizer.optimize(x0, epsilon=1e-6, max_iter=100, bk=10)
+    x_min, f_min = optimizer.optimize(x0, max_iter=100, bk=10)
     pprint(x_min)
 
-    plot2dOptimization(problem.objective_function, x_min)    
-        
+    plot2dOptimization(problem.objective_function, x_min)
