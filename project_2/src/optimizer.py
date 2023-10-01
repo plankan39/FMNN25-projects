@@ -13,6 +13,7 @@ class Optimizer:
         g_tol: float = 1e-5,
         x_tol: float = 0,
         max_iterations: int = 500,
+        approximate_first_H: bool = False
     ):
         """
         Initialize an optimization solver.
@@ -31,7 +32,7 @@ class Optimizer:
         self.g_tol = g_tol
         self.x_tol = x_tol
         self.max_iterations = max_iterations
-        self.success = False  # Flag indicating whether optimization succeeded
+        self.approximate_first_H = approximate_first_H
 
     def optimize(self, x0):
         """
@@ -46,26 +47,27 @@ class Optimizer:
         n = x0.shape[0]
         xnew = x0
         gnew = self.problem.gradient_function(x0)
+        # Hnew = np.eye(n)
+
         Hnew = np.eye(n)
-        Hnew = np.linalg.inv(self.problem.hessian_function(x0))
+        if self.approximate_first_H:
+            Hnew = np.linalg.inv(self.problem.hessian_function(x0))
 
         x_list = [xnew]
 
-        for i in range(self.max_iterations):
+        for _ in range(self.max_iterations):
             x = xnew
             g = gnew
             H = Hnew
+
             s = -H @ g
             alpha, *_ = self.line_search.search(x, s)
 
             xnew = x + alpha * s
             gnew = self.problem.gradient_function(xnew)
-            Hnew = self.calculate_H(H, gnew, g, xnew, x)
-
-            if self.check_criterion(x, xnew, g):
-                self.success = True
-                self.xmin = xnew
+            if self.check_criterion(x, xnew, gnew):
                 break
+            Hnew = self.calculate_H(H, gnew, g, xnew, x)
 
             x_list.append(xnew)
 
@@ -136,7 +138,7 @@ class Optimizer:
         x, y = np.meshgrid(x, y)
         Z = self.problem.objective_function([x, y])
         levels = np.hstack((np.arange(Z.min() - 1, 5, 2),
-                           np.arange(5, Z.max() + 1, 50)))
+                            np.arange(5, Z.max() + 1, 50)))
 
         plt.figure(figsize=(8, 6))
         contour = plt.contour(x, y, Z, levels=levels, cmap='viridis')
@@ -192,7 +194,6 @@ class GoodBroyden(Optimizer):
         y = np.reshape(y, (y.shape[0], 1))
 
         Hnew = H + (d - H@y)/(d.T@H@y) @ d.T@H
-
         return Hnew
 
 
@@ -211,21 +212,15 @@ class BadBroyden(Optimizer):
 class SymmetricBroyden(Optimizer):
     def calculate_H(self, H, gnew, g, xnew, x):
         d = xnew - x
-        y = gnew-g
+        y = gnew - g
+
         d = np.reshape(d, (d.shape[0], 1))
         y = np.reshape(y, (y.shape[0], 1))
 
-        # ys_t = np.outer(y, s)
-        # sy_t = np.outer(s, y)
-        # denominator1 = np.dot(s, y)
-        # denominator2 = np.dot(y, s - np.dot(H, y))
-
-        # if denominator1 == 0 or denominator2 == 0:
-        #     raise Exception("Denominator is zero in Symmetric Broyden update.")
         u = d - H@y
         a = 1/(u.T@y)
 
-        Hnew = H + a@u@u.T
+        Hnew = H + a*u@u.T
 
         return Hnew
 
@@ -242,7 +237,7 @@ class DFP(Optimizer):
 
 
 class BFGS(Optimizer):
-    def calculate_H_bfgs(self, H, gnew, g, xnew, x):
+    def calculate_H(self, H, gnew, g, xnew, x):
         """
         Update the Hessian matrix using the BFGS update formula.
 
@@ -269,6 +264,46 @@ class BFGS(Optimizer):
             dTy - (dyT@H + H@y@d.T)/(dTy)
 
         return Hnew
+
+    def optimize(self, x0):
+        """
+        Solve the optimization problem starting from an initial guess.
+
+        Parameters:
+        - x_0: Initial guess for the solution.
+
+        Returns:
+        - The optimized solution.
+        """
+        x_list = [x0]
+        n = x0.shape[0]
+        xnew = x0
+        gnew = self.problem.gradient_function(x0)
+        Hnew = np.eye(n)
+        # self.points.append(copy.deepcopy(xnew))
+
+        for _ in range(self.max_iterations):
+            x = xnew
+            g = gnew
+            H = Hnew
+            # print(H)
+
+            s = -Hnew @ gnew
+            # alpha, *_ = self.line_search.search(x, s, 0, 1e8)
+            alpha, *_ = self.line_search.search(x, s)
+
+            xnew = x + alpha * s
+            gnew = self.problem.gradient_function(xnew)
+            Hnew = self.calculate_H(H, gnew, g, xnew, x)
+            x_list.append(xnew)
+
+            # self.points.append(copy.deepcopy(xnew))
+            if self.check_criterion(x, xnew, g):
+                self.success = True
+                self.xmin = xnew
+                break
+
+        return x_list
 
 
 if __name__ == "__main__":

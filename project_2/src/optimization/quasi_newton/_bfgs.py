@@ -56,9 +56,11 @@ class BFGS(QuasiNewtonOptimizer):
             x = xnew
             g = gnew
             H = Hnew
+            print(H)
 
             s = -Hnew @ gnew
-            alpha, *_ = self.line_search.search(x, s, 0, 1e8)
+            # alpha, *_ = self.line_search.search(x, s, 0, 1e8)
+            alpha, *_ = self.line_search.search(x, s)
 
             xnew = x + alpha * s
             gnew = self.problem.gradient_function(xnew)
