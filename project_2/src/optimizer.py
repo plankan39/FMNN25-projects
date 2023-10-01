@@ -306,5 +306,91 @@ class BFGS(Optimizer):
         return x_list
 
 
+class CompareBFGS(Optimizer):
+    def calculate_H(self, H, gnew, g, xnew, x):
+        """
+        Update the Hessian matrix using the BFGS update formula.
+
+        Parameters:
+        - H: The current H
+        - gnew: current gradient.
+        - g: previous gradient
+        - xnew: the current point.
+        - x: the previous point.
+
+        Returns:
+        - The updated H matrix.
+        """
+
+        d = xnew - x
+        y = gnew-g
+        d = np.reshape(d, (d.shape[0], 1))
+        y = np.reshape(y, (y.shape[0], 1))
+
+        dTy = d.T@y
+        dyT = d@y.T
+
+        Hnew = H + (1 + (y.T@H@y)/dTy) * (d@d.T) / \
+            dTy - (dyT@H + H@y@d.T)/(dTy)
+
+        return Hnew
+
+    def optimize(self, x0, analytic_H):
+        """
+        Solve the optimization problem starting from an initial guess.
+
+        Parameters:
+        - x_0: Initial guess for the solution.
+
+        Returns:
+        - The optimized solution.
+        """
+        x_list = [x0]
+        n = x0.shape[0]
+        xnew = x0
+        gnew = self.problem.gradient_function(x0)
+        Hnew = np.eye(n)
+        # self.points.append(copy.deepcopy(xnew))
+
+        for _ in range(self.max_iterations):
+            x = xnew
+            g = gnew
+            H = Hnew
+            # print(H)
+
+            s = -Hnew @ gnew
+
+            # alpha, *_ = self.line_search.search(x, s, 0, 1e8)
+            alpha, *_ = self.line_search.search(x, s)
+
+            xnew = x + alpha * s
+            gnew = self.problem.gradient_function(xnew)
+            Hnew = self.calculate_H(H, gnew, g, xnew, x)
+            Hanalytic = analytic_H(xnew)
+            Hdiff = np.linalg.inv(self.problem.hessian_function(xnew))
+            diff = np.linalg.norm(Hnew - Hdiff)
+            print(diff)
+
+            # Hnew = np.linalg.inv(self.problem.hessian_function(xnew))
+            x_list.append(xnew)
+
+            # self.points.append(copy.deepcopy(xnew))
+            if self.check_criterion(x, xnew, g):
+                self.success = True
+                self.xmin = xnew
+                break
+
+        return x_list
+
+    def H_rosenbrock(self, x):
+        dxx = 1 / (400 * x[0] ** 2 - 400 * x[1] + 2)
+        dxy = x[0] / (200 * x[0] ** 2 - 200 * x[1] + 1)
+        dyy = (600 * x[0] ** 2 - 200 * x[1] + 1) / (
+            200 * (200 * x[0] ** 2 - 200 * x[1] + 1)
+        )
+
+        return np.array([[dxx, dxy], [dxy, dyy]])
+
+
 if __name__ == "__main__":
     print("hello")

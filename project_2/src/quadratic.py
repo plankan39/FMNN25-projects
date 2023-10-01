@@ -25,6 +25,12 @@ class f_quadratic:
         x_min = self.analytic_minimizer()
         return self.eval(x_min)
 
+    def grad(self, x):
+        return self.Q @ x
+
+    def hess(self, x):
+        return self.Q
+
 
 def positive_definite_quadratic_data(n, seed=True):
     """
@@ -36,7 +42,8 @@ def positive_definite_quadratic_data(n, seed=True):
     if seed == False:
         rs = np.random
     else:
-        rs = np.random.RandomState(np.random.MT19937(np.random.SeedSequence(seed)))
+        rs = np.random.RandomState(
+            np.random.MT19937(np.random.SeedSequence(seed)))
     Q = rs.randn(n, n)
     Q = Q.T @ Q
 
