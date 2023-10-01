@@ -1,12 +1,12 @@
 import numpy as np
 from scipy import optimize as scipy_optimize
 import line_search as LineSearch
-from optimization import Problem
 
 # from optimization.quasi_newton._bfgs import BFGS
 import optimizer
 import chebyquad_problem
 
+from rosenbrock import rosenbrock
 
 if __name__ == "__main__":
 
@@ -55,9 +55,9 @@ if __name__ == "__main__":
     opt_names = ["good broyden", "bad broyden",
                  "symetric broyden", "dfp", "bfgs "]
 
-    problem = Problem(chebyquad_problem.chebyquad,
+    problem = optimizer.Problem(chebyquad_problem.chebyquad,
                       chebyquad_problem.gradchebyquad)
-    line_seach = LineSearch.PowellWolfeBenja(
+    line_seach = LineSearch.PowellWolfe(
         problem.objective_function, problem.gradient_function
     )
 

@@ -1,6 +1,6 @@
 import numpy as np
-from scipy import optimize
 from finite_difference import finite_difference_hessian
+from scipy import optimize
 
 
 class f_quadratic:
@@ -43,8 +43,7 @@ def positive_definite_quadratic_data(n, seed=True):
     if seed == False:
         rs = np.random
     else:
-        rs = np.random.RandomState(
-            np.random.MT19937(np.random.SeedSequence(seed)))
+        rs = np.random.RandomState(np.random.MT19937(np.random.SeedSequence(seed)))
     Q = rs.randn(n, n)
     Q = Q.T @ Q
 

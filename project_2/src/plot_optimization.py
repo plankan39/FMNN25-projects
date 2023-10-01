@@ -1,6 +1,5 @@
-
-from matplotlib import pyplot as plt
 import numpy as np
+from matplotlib import pyplot as plt
 
 
 def plot2dOptimization(
@@ -11,6 +10,16 @@ def plot2dOptimization(
     nx=100,
     ny=100,
 ):
+    """_summary_
+
+    Args:
+        f (_type_): _description_
+        x_steps (_type_): _description_
+        x_range (tuple, optional): _description_. Defaults to (-5, 5).
+        y_range (tuple, optional): _description_. Defaults to (-5, 5).
+        nx (int, optional): _description_. Defaults to 100.
+        ny (int, optional): _description_. Defaults to 100.
+    """
     x = np.linspace(x_range[0], x_range[1], nx)
     y = np.linspace(y_range[0], y_range[1], ny)
 

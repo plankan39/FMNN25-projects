@@ -1,13 +1,11 @@
 from pprint import pprint
+
 import numpy as np
-from optimization import Problem
-from optimizer import Optimizer
-from plot_optimization import plot2dOptimization
 from line_search import ExactLineSearch
+from optimizer import Optimizer, Problem
+from plot_optimization import plot2dOptimization
 
-
-def rosenbrock(x):
-    return 100 * (x[1] - x[0] ** 2) ** 2 + (1 - x[0]) ** 2
+from rosenbrock import rosenbrock
 
 
 if __name__ == "__main__":
@@ -17,8 +15,9 @@ if __name__ == "__main__":
 
     problem = Problem(rosenbrock)
     line_search = ExactLineSearch(problem.objective_function, u_bound=10)
-    optimizer = Optimizer(problem, line_search, g_tol=g_tol,
-                          x_tol=1e-5, max_iterations=max_iter)
+    optimizer = Optimizer(
+        problem, line_search, g_tol=g_tol, x_tol=1e-5, max_iterations=max_iter
+    )
 
     x0 = np.array([0, -0.7])
     x_list = optimizer.optimize(x0)

@@ -1,14 +1,10 @@
 from pprint import pprint
 
 import numpy as np
-from line_search import PowellWolfeScipy, PowellWolfe, PowellWolfeBenja
-from optimization import Problem
-from optimizer import Optimizer
+from line_search import PowellWolfe
+from optimizer import Optimizer, Problem
 from plot_optimization import plot2dOptimization
-
-
-def rosenbrock(x):
-    return 100 * (x[1] - x[0] ** 2) ** 2 + (1 - x[0]) ** 2
+from rosenbrock import rosenbrock
 
 
 if __name__ == "__main__":
@@ -18,15 +14,13 @@ if __name__ == "__main__":
 
     x0 = np.array([0, -0.7])
     problem = Problem(rosenbrock)
-    line_search = PowellWolfeBenja(
+    line_search = PowellWolfe(
         problem.objective_function, problem.gradient_function
     )
-    # line_search = PowellWolfeScipy(
-    #     problem.objective_function, problem.gradient_function
-    # )
 
-    optimizer = Optimizer(problem, line_search, g_tol=g_tol,
-                          x_tol=1e-5, max_iterations=max_iter)
+    optimizer = Optimizer(
+        problem, line_search, g_tol=g_tol, x_tol=1e-5, max_iterations=max_iter
+    )
 
     x0 = np.array([0, -0.7])
     x_list = optimizer.optimize(x0)
