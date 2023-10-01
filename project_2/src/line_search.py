@@ -20,10 +20,10 @@ class LineSearch(Protocol):
         """_summary_
 
         Args:
-            x (np.ndarray): _description_
-            direction (np.ndarray): _description_
-            l_bound (float, optional): _description_. Defaults to 0.
-            u_bound (float, optional): _description_. Defaults to 1e5.
+            x (np.ndarray): The initial point
+            direction (np.ndarray): direction to search in
+            l_bound (float, optional): lower bound to search. Defaults to 0.
+            u_bound (float, optional): upper bound to search. Defaults to 1e5.
 
         Returns:
             tuple[float, int]: _description_
@@ -54,39 +54,12 @@ class PowellWolfe(LineSearch):
         self.c2 = c2
 
     def armijo(self, f, x, alpha, direction, fx, gx, c1) -> bool:
-        """_summary_
-
-        Args:
-            f (_type_): _description_
-            x (_type_): _description_
-            alpha (_type_): _description_
-            direction (_type_): _description_
-            fx (_type_): _description_
-            gx (_type_): _description_
-            c1 (_type_): _description_
-
-        Returns:
-            bool: _description_
-        """
+        """Checks armijo condition."""
         res = f(x + alpha * direction) <= fx + c1 * alpha * gx.T @ direction
         return res
 
     def wolfe(self, f, f_grad, x, alpha, direction, fx, gx, c2) -> bool:
-        """_summary_
-
-        Args:
-            f (_type_): _description_
-            f_grad (_type_): _description_
-            x (_type_): _description_
-            alpha (_type_): _description_
-            direction (_type_): _description_
-            fx (_type_): _description_
-            gx (_type_): _description_
-            c2 (_type_): _description_
-
-        Returns:
-            bool: _description_
-        """
+        """Checks wolfe condition."""
         res = f_grad(x + alpha * direction).T @ direction >= c2 * gx.T @ direction
         return res
 
@@ -187,9 +160,9 @@ class ExactLineSearch(LineSearch):
         """_summary_
 
         Args:
-            f (Callable): _description_
-            epsilon (float, optional): _description_. Defaults to 1e-5.
-            u_bound (float, optional): _description_. Defaults to 1e5.
+            f (Callable):
+            epsilon (float, optional): Defaults to 1e-5.
+            u_bound (float, optional): Defaults to 1e5.
         """
         self.f = f
         self.epsilon = epsilon

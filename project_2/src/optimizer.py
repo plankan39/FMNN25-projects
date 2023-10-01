@@ -43,8 +43,7 @@ class Optimizer:
         max_iterations: int = 500,
         approximate_first_H: bool = False,
     ):
-        """_summary_
-
+        """
         Args:
             problem (Problem): _description_
             line_search (LineSearch): _description_
@@ -60,15 +59,7 @@ class Optimizer:
         self.max_iterations = max_iterations
         self.approximate_first_H = approximate_first_H
 
-    def optimize(self, x0):
-        """_summary_
-
-        Args:
-            x0 (_type_): _description_
-
-        Returns:
-            _type_: _description_
-        """
+    def optimize(self, x0: np.ndarray) -> list[np.ndarray]:
         n = x0.shape[0]
         xnew = x0
         gnew = self.problem.gradient_function(x0)
