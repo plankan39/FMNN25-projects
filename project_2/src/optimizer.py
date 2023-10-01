@@ -1,11 +1,10 @@
 from typing import Callable
 
 import line_search
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 from finite_difference import finite_difference_gradient, finite_difference_hessian
 from line_search import LineSearch
-from optimizer import Problem
 
 
 class Problem:
@@ -26,7 +25,8 @@ class Problem:
     ) -> None:
         self.objective_function = f
         self.gradient_function = (
-            f_grad if f_grad else lambda x: finite_difference_gradient(f, x, 1e-6)
+            f_grad if f_grad else lambda x: finite_difference_gradient(
+                f, x, 1e-6)
         )
         self.hessian_function = (
             f_hess if f_hess else lambda x: finite_difference_hessian(x, f)
@@ -134,6 +134,7 @@ class ClassicalNewton(Optimizer):
         g_tol: float = 1e-5,
         x_tol: float = 0,
         max_iterations: int = 500,
+        approximate_first_H: bool = False,
     ):
         super().__init__(
             problem,
@@ -141,6 +142,7 @@ class ClassicalNewton(Optimizer):
             g_tol,
             x_tol,
             max_iterations,
+            approximate_first_H
         )
 
 

@@ -9,7 +9,7 @@ import optimizer
 
 
 if __name__ == "__main__":
-    n = 100
+    n = 11
     Q, q = quadratic.positive_definite_quadratic_data(n)
     quad = quadratic.f_quadratic(Q, q, n)
     problem = Problem(quad.eval)

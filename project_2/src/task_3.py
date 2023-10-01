@@ -1,8 +1,8 @@
 from pprint import pprint
 
 import numpy as np
-from optimizer import ClassicalNewton, Problem
 from plot_optimization import plot2dOptimization
+from optimizer import ClassicalNewton, Problem
 from rosenbrock import rosenbrock
 
 if __name__ == "__main__":
@@ -13,7 +13,7 @@ if __name__ == "__main__":
     problem = Problem(rosenbrock)
 
     optimizer = ClassicalNewton(
-        problem, g_tol=g_tol, x_tol=1e-5, max_iterations=max_iter
+        problem, g_tol=g_tol, x_tol=1e-5, max_iterations=max_iter, approximate_first_H=True
     )
 
     x0 = np.array([0, -0.7])
