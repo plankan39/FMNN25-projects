@@ -8,9 +8,12 @@
 # """
 
 # import scipy.optimize as so
-# from numpy import array,dot,linspace
+# from line_search import ExactLineSearch, PowellWolfeScipy
+# from numpy import array, dot, linspace
+# from optimization import Problem
+# from optimization.quasi_newton import Broyden
 
-# from optimizer import Problem, Optimization,BadBryden,SymmetricBryden,BFGS,DFP
+# # from task_3_4 import finite_difference_hessian
 
 
 # def T(x, n):
@@ -23,7 +26,7 @@
 #         return 1.0
 #     if n == 1:
 #         return x
-#     return 2. * x * T(x, n - 1) - T(x, n - 2)
+#     return 2.0 * x * T(x, n - 1) - T(x, n - 2)
 
 
 # def U(x, n):
@@ -36,8 +39,8 @@
 #     if n == 0:
 #         return 1.0
 #     if n == 1:
-#         return 2. * x
-#     return 2. * x * U(x, n - 1) - U(x, n - 2)
+#         return 2.0 * x
+#     return 2.0 * x * U(x, n - 1) - U(x, n - 2)
 
 
 # def chebyquad_fcn(x):
@@ -53,9 +56,9 @@
 #         """
 #         for i in range(n):
 #             if i % 2 == 0:
-#                 yield -1. / (i ** 2 - 1.)
+#                 yield -1.0 / (i**2 - 1.0)
 #             else:
-#                 yield 0.
+#                 yield 0.0
 
 #     exint = exact_integral(n)
 
@@ -64,7 +67,7 @@
 #         Approximates the integral by taking the mean value
 #         of n sample points
 #         """
-#         return sum(T(2. * xj - 1., i) for xj in x) / n
+#         return sum(T(2.0 * xj - 1.0, i) for xj in x) / n
 
 #     return array([approx_integral(i) - e for i, e in enumerate(exint)])
 
@@ -74,7 +77,7 @@
 #     norm(chebyquad_fcn)**2
 #     """
 #     chq = chebyquad_fcn(x)
-#     return dot(chq, chq)
+#     return dot(chq, chq)  # type: ignore
 
 
 # def gradchebyquad(x):
@@ -82,17 +85,27 @@
 #     Evaluation of the gradient function of chebyquad
 #     """
 #     chq = chebyquad_fcn(x)
-#     UM = 4. / len(x) * array([[(i + 1) * U(2. * xj - 1., i)
-#                                for xj in x] for i in range(len(x) - 1)])
-#     return dot(chq[1:].reshape((1, -1)), UM).reshape((-1,))
+#     UM = (
+#         4.0
+#         / len(x)
+#         * array(
+#             [[(i + 1) * U(2.0 * xj - 1.0, i) for xj in x]
+#              for i in range(len(x) - 1)]
+#         )
+#     )
+#     return dot(chq[1:].reshape((1, -1)), UM).reshape((-1,))  # type: ignore
 
 
-# if __name__ == '__main__':
-#     x = linspace(0, 1, 8)
-#     xmin = so.fmin_bfgs(chebyquad, x, gradchebyquad)  # should converge after 18 iterations
+# if __name__ == "__main__":
+#     x = linspace(0, 1, 8)  # type: ignore
+#     # should converge after 18 iterations
+#     xmin = so.fmin_bfgs(chebyquad, x, gradchebyquad)
 #     print(xmin)
 #     problem = Problem(chebyquad, gradchebyquad)
-#     optimization = BFGS(problem=problem,max_iterations=10000)
-#     optimization.solve(x)
+#     ls = PowellWolfeScipy(problem.objective_function,
+#                           problem.gradient_function)
+#     # ls = PowellWolfeScipy(problem.objective_function, problem.gradient_function)
+#     # ls = ExactLineSearch(problem.objective_function)
+#     optimization = Broyden(problem, ls)
+#     optimization.optimize(x)
 #     optimization.report()
-#     # optimization.function_plot()

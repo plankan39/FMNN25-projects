@@ -14,7 +14,7 @@ class LineSearch(Protocol):
         x: np.ndarray,
         direction: np.ndarray,
         l_bound: float = 0,
-        u_bound: float = 1e8,
+        u_bound: float = 1e5,
     ) -> tuple[float, int]:
         """Perform line search to find the best step size alpha
 

@@ -9,6 +9,12 @@ from ._quasi_newton import QuasiNewtonOptimizer
 from optimization import Problem
 
 
+class _H_G_upate():
+    def __init__(self, update_rule="bfgs"):
+        if update_rule == "bfgs":
+            self.
+
+
 class BFGS(QuasiNewtonOptimizer):
     def __init__(
         self,
@@ -100,10 +106,10 @@ class BFGS(QuasiNewtonOptimizer):
         - The optimal step size.
         """
 
-        def func(alpha):
+        def f_line(alpha):
             return self.problem.objective_function(x + alpha * s)
 
-        minimize_search = minimize_scalar(func)
+        minimize_search = minimize_scalar(f_line)
         if minimize_search.success:
             return minimize_search.x
         else:

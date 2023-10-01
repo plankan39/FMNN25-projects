@@ -1,6 +1,6 @@
+import numpy as np
 from scipy import optimize as scipy_optimize
 import line_search as LineSearch
-import numpy as np
 from optimization import Problem
 from optimization.quasi_newton._bfgs import BFGS
 import chebyquad_problem

@@ -1,73 +1,75 @@
 import numpy as np
-from scipy.optimize import minimize_scalar
-import copy
+import line_search
+from line_search import LineSearch
 import matplotlib.pyplot as plt
+from optimization import Problem
 
 
-class Problem:
-    def __init__(self, objective_function, gradient_function=None):
-        """
-        Initialize a problem for optimization.
-
-        Parameters:
-        - objective_function: The objective function to be minimized.
-        - gradient_function: (Optional) The gradient function of the objective function.
-        """
-        self.objective_function = objective_function
-        self.gradient_function = gradient_function
-
-
-class Optimization:
-    def __init__(self, problem, residual_criterion=1e-10, cauchy_criterion=1e-10, max_iterations=500):
+class Optimizer:
+    def __init__(
+        self,
+        problem: Problem,
+        line_search: LineSearch,
+        g_tol: float = 1e-5,
+        x_tol: float = 0,
+        max_iterations: int = 500,
+    ):
         """
         Initialize an optimization solver.
 
+        DEFAULT IS STANDARD NEWTON
+        TODO: fix comments
         Parameters:
         - problem: The problem to be solved, an instance of the Problem class.
+        - line_search: a line search method
         - residual_criterion: The termination criterion for the residual norm.
         - cauchy_criterion: The termination criterion for the Cauchy step norm.
         - max_iterations: The maximum number of iterations for the solver.
         """
         self.problem = problem
-        self.residual_criterion = residual_criterion
-        self.cauchy_criterion = cauchy_criterion
-        self.max_iterations = max_iterations if max_iterations > 0 else 100000
-        self.points = []  # Store optimization path
+        self.line_search = line_search
+        self.g_tol = g_tol
+        self.x_tol = x_tol
+        self.max_iterations = max_iterations
         self.success = False  # Flag indicating whether optimization succeeded
 
-    def solve(self, x_0):
+    def optimize(self, x0):
         """
         Solve the optimization problem starting from an initial guess.
 
         Parameters:
-        - x_0: Initial guess for the solution.
+        - x0: Initial guess for the solution.
 
         Returns:
         - The optimized solution.
         """
-        x = x_next = x_0
-        H = np.eye(len(x))
-        g = self.compute_gradient(x)
-        self.points.append(copy.deepcopy(x_next))
+        n = x0.shape[0]
+        xnew = x0
+        gnew = self.problem.gradient_function(x0)
+        Hnew = np.eye(n)
 
-        for iteration in range(self.max_iterations):
-            s = -np.dot(H, g)
-            alpha = self.line_search(x, s)
-            x_next = x + alpha * s
-            self.points.append(copy.deepcopy(x_next))
-            if self.check_criterion(x, x_next, g):
+        x_list = [xnew]
+
+        for _ in range(self.max_iterations):
+            x = xnew
+            g = gnew
+            H = Hnew
+
+            s = -H @ g
+            alpha, *_ = self.line_search.search(x, s)
+
+            xnew = x + alpha * s
+            gnew = self.problem.gradient_function(xnew)
+            H_new = self.calculate_H(H, gnew, g, xnew, x)
+
+            if self.check_criterion(x, xnew, g):
                 self.success = True
+                self.xmin = xnew
                 break
 
-            g_next = self.compute_gradient(x_next)
-            H = self.calculate_hessian(H, x_next, x, g, g_next)
+            x_list.append(xnew)
 
-            g = copy.deepcopy(g_next)
-            x = copy.deepcopy(x_next)
-
-        self.x = x_next
-        self.g = g_next
-        return self.x
+        return x_list
 
     def check_criterion(self, x, x_next, g):
         """
@@ -81,45 +83,7 @@ class Optimization:
         Returns:
         - True if any of the termination criteria are met, otherwise False.
         """
-        return (np.linalg.norm(x_next - x) < self.cauchy_criterion) or (np.linalg.norm(g) < self.residual_criterion)
-
-    def compute_gradient(self, x):
-        """
-        Compute the gradient at a given solution.
-
-        Parameters:
-        - x: The solution at which the gradient is computed.
-
-        Returns:
-        - The gradient vector.
-        """
-        if self.problem.gradient_function:
-            return self.problem.gradient_function(x)
-        return self.calculate_gradient(x)  # To be implemented in derived classes
-
-    def calculate_gradient(self, x):
-        raise NotImplementedError
-
-    def line_search(self, x, s):
-        """
-        Perform line search to find an optimal step size.
-
-        Parameters:
-        - x: Current solution.
-        - s: Search direction.
-
-        Returns:
-        - The optimal step size.
-        """
-
-        def func(alpha):
-            return self.problem.objective_function(x + alpha * s)
-
-        minimize_search = minimize_scalar(func)
-        if minimize_search.success:
-            return minimize_search.x
-        else:
-            raise Exception("Exact line search failed to converge.")
+        return (np.linalg.norm(x_next - x) < self.x_tol) or (np.linalg.norm(g) < self.g_tol)
 
     def report(self):
         """
@@ -129,38 +93,40 @@ class Optimization:
             print("Optimization Successful!")
             print("Optimal Solution:")
             print("x =", self.x)
-            print("Objective Function Value =", self.problem.objective_function(self.x))
+            print("Objective Function Value =",
+                  self.problem.objective_function(self.x))
             print("Number of Iterations =", len(self.points) - 1)
         else:
             print("Optimization Failed!")
 
-    def calculate_hessian(self, H, x_next, x, g, g_next):
+    def calculate_H(self, H, gnew, g, xnew, x):
         """
-        Update the Hessian matrix using the Broyden update formula.
+        Update the Hessian matrix using the BFGS update formula.
 
         Parameters:
-        - H: The current Hessian matrix.
-        - x_next: Next solution.
-        - x: Current solution.
-        - g: Gradient at the current solution.
-        - g_next: Gradient at the next solution.
+        - H: The current approximation of the inverse Hessian
+        - G: The current approximation of the Hessian
+        - gnew: current gradient.
+        - g: previous gradient
+        - xnew: the current point.
+        - x: the previous point.
 
         Returns:
-        - The updated Hessian matrix.
+        - The updated H and G matrices.
         """
-        s = x_next - x
-        y = g_next - g
 
-        ys_t = np.outer(y, s)
-        sy_t = np.outer(s, y)
-        denominator = np.dot(y, s)
+        d = xnew - x
+        y = gnew - g
+        d = np.reshape(d, (d.shape[0], 1))
+        y = np.reshape(y, (y.shape[0], 1))
 
-        if denominator == 0:
-            raise Exception("Denominator is zero in Good Broyden update.")
+        dTy = d.T@y
+        dyT = d@y.T
 
-        H += ys_t / denominator - np.dot(ys_t, sy_t) / np.dot(sy_t, y)
+        Hnew = H + (1 + (y.T@H@y)/dTy) * (d@d.T) / \
+            dTy - (dyT@H + H@y@d.T)/(dTy)
 
-        return H
+        return Hnew
 
     def function_plot(self, min_range=(-0.5, -2), max_range=(2, 4), range_steps=(100, 100)):
         """
@@ -177,14 +143,16 @@ class Optimization:
         y = np.linspace(min_range[1], max_range[1], range_steps[1])
         x, y = np.meshgrid(x, y)
         Z = self.problem.objective_function([x, y])
-        levels = np.hstack((np.arange(Z.min() - 1, 5, 2), np.arange(5, Z.max() + 1, 50)))
+        levels = np.hstack((np.arange(Z.min() - 1, 5, 2),
+                           np.arange(5, Z.max() + 1, 50)))
 
         plt.figure(figsize=(8, 6))
         contour = plt.contour(x, y, Z, levels=levels, cmap='viridis')
         plt.clabel(contour, inline=1, fontsize=10, fmt='%d')
 
         points = np.asarray(self.points)
-        plt.plot(points[:, 0], points[:, 1], marker='o', color='red', linestyle='-', markersize=5)
+        plt.plot(points[:, 0], points[:, 1], marker='o',
+                 color='red', linestyle='-', markersize=5)
 
         plt.colorbar(contour, label='Objective Function Value')
         plt.xlabel('x')
@@ -193,46 +161,128 @@ class Optimization:
         plt.savefig('Contour_Plot.png')
 
 
-class BadBryden(Optimization):
-    def calculate_hessian(self, H, x_next, x, g, g_next):
-        s = x_next - x
-        y = g_next - g
+class ClassicalNewton(Optimizer):
+    def __init__(
+        self,
+        problem: Problem,
+        line_search: LineSearch = line_search.Identity(),
+        g_tol: float = 1e-5,
+        x_tol: float = 0,
+        max_iterations: int = 500,
+    ):
+        super().__init__(
+            problem,
+            line_search,
+            g_tol,
+            x_tol,
+            max_iterations,
+        )
 
-        ys_t = np.outer(y, s)
-        denominator = np.dot(s, y)
-
-        if denominator == 0:
-            raise Exception("Denominator is zero in Bad Broyden update.")
-
-        H += ys_t / denominator
-
-        return H
-
-
-class SymmetricBryden(Optimization):
-    def calculate_hessian(self, H, x_next, x, g, g_next):
-        s = x_next - x
-        y = g_next - g
-
-        ys_t = np.outer(y, s)
-        sy_t = np.outer(s, y)
-        denominator1 = np.dot(s, y)
-        denominator2 = np.dot(y, s - np.dot(H, y))
-
-        if denominator1 == 0 or denominator2 == 0:
-            raise Exception("Denominator is zero in Symmetric Broyden update.")
-
-        H += ys_t / denominator1 - np.dot(ys_t, sy_t) / denominator2
-
-        return H
+    def calculate_H(self, H, gnew, g, xnew, x):
+        Gnew = self.problem.hessian_function(xnew)
+        Hnew = np.linalg.inv(Gnew)
+        return Hnew
 
 
-class DFP(Optimization):
-    def calculate_hessian(self, H, x_next, x, g, g_next):
-        # TODO
-        return H
+class GoodBroyden(Optimizer):
+    def calculate_H(self, H, gnew, g, xnew, x):
+        """
+        Update the Hessian matrix using the Broyden update formula.
 
-class BFGS(Optimization):
-    def calculate_hessian(self, H, x_next, x, g, g_next):
-        # TODO
-        return H
+        Parameters:
+        - H: The current Hessian matrix.
+        - x_next: Next solution.
+        - x: Current solution.
+        - g: Gradient at the current solution.
+        - g_next: Gradient at the next solution.
+
+        Returns:
+        - The updated Hessian matrix.
+        """
+        d = xnew - x
+        y = gnew-g
+        d = np.reshape(d, (d.shape[0], 1))
+        y = np.reshape(y, (y.shape[0], 1))
+
+        Hnew = H + (d - H@y)/(d.T@H@y) @ d.T@H
+
+        return Hnew
+
+
+class BadBroyden(Optimizer):
+    def calculate_H(self, H, gnew, g, xnew, x):
+        d = xnew - x
+        y = gnew-g
+        d = np.reshape(d, (d.shape[0], 1))
+        y = np.reshape(y, (y.shape[0], 1))
+
+        Hnew = H + (d - H@y)/(y.T@y) @ y.T
+
+        return Hnew
+
+
+class SymmetricBryden(Optimizer):
+    def calculate_H(self, H, gnew, g, xnew, x):
+        d = xnew - x
+        y = gnew-g
+        d = np.reshape(d, (d.shape[0], 1))
+        y = np.reshape(y, (y.shape[0], 1))
+
+        # ys_t = np.outer(y, s)
+        # sy_t = np.outer(s, y)
+        # denominator1 = np.dot(s, y)
+        # denominator2 = np.dot(y, s - np.dot(H, y))
+
+        # if denominator1 == 0 or denominator2 == 0:
+        #     raise Exception("Denominator is zero in Symmetric Broyden update.")
+        u = d - H@y
+        a = 1/(u.T@y)
+
+        Hnew = H + a@u@u.T
+
+        return Hnew
+
+
+class DFP(Optimizer):
+    def calculate_H(self, H, gnew, g, xnew, x):
+        d = xnew - x
+        y = gnew-g
+        d = np.reshape(d, (d.shape[0], 1))
+        y = np.reshape(y, (y.shape[0], 1))
+
+        Hnew = H + (d@d.T)/(d.T@y) - (H@y@y.T@H)/(y.T@H@y)
+        return Hnew
+
+
+class BFGS(Optimizer):
+    def calculate_H_bfgs(self, H, gnew, g, xnew, x):
+        """
+        Update the Hessian matrix using the BFGS update formula.
+
+        Parameters:
+        - H: The current H
+        - gnew: current gradient.
+        - g: previous gradient
+        - xnew: the current point.
+        - x: the previous point.
+
+        Returns:
+        - The updated H matrix.
+        """
+
+        d = xnew - x
+        y = gnew-g
+        d = np.reshape(d, (d.shape[0], 1))
+        y = np.reshape(y, (y.shape[0], 1))
+
+        dTy = d.T@y
+        dyT = d@y.T
+
+        Hnew = H + (1 + (y.T@H@y)/dTy) * (d@d.T) / \
+            dTy - (dyT@H + H@y@d.T)/(dTy)
+
+        return Hnew
+
+
+if __name__ == "__main__":
+    print("hello")

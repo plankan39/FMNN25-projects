@@ -10,8 +10,9 @@ class Problem:
     Initialize a problem for optimization.
 
     Parameters:
-    - objective_function: The objective function to be minimized.
-    - gradient_function: (Optional) The gradient function of the objective function.
+    - f: the objective function
+    - f_grad: (Optional) The gradient of he objective function.
+    - f_hess: (Optional) The hessian of the objective function.
     """
 
     def __init__(

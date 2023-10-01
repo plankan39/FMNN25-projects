@@ -237,6 +237,44 @@ class PowellWolfeScipy(LineSearch):
         return alpha, fN, gN  # type: ignore
 
 
+class Identity(LineSearch):
+    def __init__(self) -> None:
+        """Initiates attributes used to perform the lineSearch
+
+        Args:
+            f (Callable[[np.ndarray], float]): The objective function
+            gradF (Callable[[np.ndarray], np.ndarray]): The gradient of f.
+            stepSizeInitial (float, optional): The initial guess for step size.
+            Defaults to 2.
+            c1 (float): Constant for armijo condition.
+            c2 (float): Constant for wolfe condition
+        """
+        self.f = None
+        self.gradF = None
+
+    def search(
+        self,
+        x: np.ndarray,
+        direction: np.ndarray,
+        l_bound: float = 0,
+        u_bound: float = 1e5,
+    ) -> tuple[float, int, int]:
+        """Perform line search with PowellWolfe algorithm
+
+        Args:
+            x (np.ndarray): The current point
+            direction (np.ndarray): A direction that is descending.
+
+
+        Returns:
+            (alpha: float, fN: int, gN: int): where alpha is the step size
+            fN is the number of times f was called and gN is the number of times
+            gradF was called.
+        """
+
+        return 1, 0, 0
+
+
 if __name__ == "__main__":
     from scipy.optimize import line_search as line_search_scipy
 
