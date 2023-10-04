@@ -2,3 +2,4 @@ numpy
 scipy
 matplotlib
 black
+mpi4py
