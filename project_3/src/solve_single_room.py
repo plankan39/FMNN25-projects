@@ -14,8 +14,8 @@ def construct_matrix(x_N: int, y_N: int):
     # The agacent diagonals under and over d_0
     d_1 = np.ones(x_N * y_N - 1)
     # Change the corner points where Boundary conditions are imposed.
-    for k in range(1, x_N):
-        d_1[k * y_N - 1] = 0
+    # for k in range(1, x_N):
+    #     d_1[k * y_N - 1] = 0
 
     d_1[[k * y_N - 1 for k in range(1, x_N)]] = 0
     # The two last diagonals that are y_N
