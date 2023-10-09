@@ -108,8 +108,9 @@ def solve_neumann(x_N: int, y_N: int, boundary: Boundary):
         d2[i * y_N + 1 : (i + 1) * y_N - 1] = 1
 
     A = diags(
-        [np.flip(d2), np.flip(d1), d0, d1, d2], [-y_N, -1, 0, 1, y_N], format="csc"
+        [np.flip(d2), np.flip(d1), d0, d1, d2], [-y_N, -1, 0, 1, y_N], format="lil"
     )
+
     print(A.toarray())
     b = np.zeros(N)
     b[:y_N] = boundary.left
