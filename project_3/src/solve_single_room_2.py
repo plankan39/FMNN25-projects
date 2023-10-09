@@ -17,9 +17,6 @@ class Boundary:
     bot_dirichlet: np.ndarray
 
 
-<< << << < HEAD
-
-
 def calculate_neuman_values(boundary: Boundary, temperature: np.ndarray):
     left = np.zeros_like(boundary.left_dirichlet)
     for i, b in enumerate(boundary.left_dirichlet):
