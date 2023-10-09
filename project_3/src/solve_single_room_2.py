@@ -226,7 +226,7 @@ if __name__ == "__main__":
     t1s = []
     t2s = []
     t3s = []
-    for i in range(500):
+    for i in range(10):
 
         t2, A, b = solve_dirichlet(omega_2)
         # print(t2)
