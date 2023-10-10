@@ -100,4 +100,9 @@ if __name__ == "__main__":
         dirichlet = Boundary(temperature[:, 0], omega.left.dirichlet)
         comm.send(dirichlet, dest=1)
 
+    if rank == 3:
+        comm.recv(source=0)
+        comm.recv(source=1)
+        comm.recv(source=2)
+
     print("\n", "#" * 40, f" {rank} ", "#" * 40, "\n", temperature, "\n", "#" * 88)
