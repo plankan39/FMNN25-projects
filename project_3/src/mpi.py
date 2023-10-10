@@ -1,6 +1,6 @@
 from mpi4py import MPI
 import numpy as np
-from room import Room, Boundary, plot_temp
+from room import Room, Boundary, plot_temp_rooms
 
 # Tunable parameters
 WALL = 15
@@ -10,7 +10,7 @@ W = 0.8
 ITERATIONS = 10
 
 # Describing room 1
-X_N_1 = 21
+X_N_1 = 4
 Y_N_1 = X_N_1
 # Describing room 2
 X_N_2 = X_N_1
@@ -31,7 +31,7 @@ def gamma2():
     return Boundary(WALL * np.ones(Y_N_3), np.array([1] + [0] * (Y_N_3 - 2) + [1]))
 
 
-def omega1() -> Room:
+def o1() -> Room:
     lb1 = Boundary(HEATER * np.ones(Y_N_1), np.ones(Y_N_1))
     tb1 = Boundary(WALL * np.ones(X_N_1), np.ones(X_N_1))
     rb1 = gamma1()
@@ -67,16 +67,16 @@ if __name__ == "__main__":
     temps = []
 
     if rank == 0:
-        omega = omega1()
+        omega = o1()
         for i in range(ITERATIONS):
             neumann: Boundary = comm.recv(source=1)
             omega.right.values[omega.right.dirichlet == 0] = neumann.values[
                 neumann.dirichlet == 0
             ]
-            temperature, *_ = omega.solveNeumann()
+            temperature, A, b = omega.solveNeumann()
             if i != 0:
-                temperature = W * temperature + (1-W) * temps[-1]
-            temps.append(temperature)
+                temperature = W * temperature + (1-W) * temps[-1][0]
+            temps.append((temperature, A, b))
 
             dirichlet = Boundary(temperature[:, -1], omega.right.dirichlet)
             comm.send(dirichlet, dest=1)
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     if rank == 1:
         omega = omega2()
         for i in range(ITERATIONS):
-            temperature, *_ = omega.solveDirichlet()
+            temperature, A, b = omega.solveDirichlet()
 
             left, _, right, _ = omega.neumannValues(temperature, H)
 
@@ -103,9 +103,9 @@ if __name__ == "__main__":
             ]
 
             if i != 0:
-                temperature = W * temperature + (1-W) * temps[-1]
+                temperature = W * temperature + (1-W) * temps[-1][0]
             
-            temps.append(temperature)
+            temps.append((temperature, A, b))
         comm.send(temps, 3)
     if rank == 2:
         for i in range(ITERATIONS):
@@ -114,26 +114,38 @@ if __name__ == "__main__":
             omega.left.values[omega.left.dirichlet == 0] = neumann.values[
                 neumann.dirichlet == 0
             ]
-            temperature, *_ = omega.solveNeumann()
+            temperature, A, b = omega.solveNeumann()
 
             dirichlet = Boundary(temperature[:, 0], omega.left.dirichlet)
             if i != 0:
-                temperature = W * temperature + (1-W) * temps[-1]
-            temps.append(temperature)
+                temperature = W * temperature + (1-W) * temps[-1][0]
+            temps.append((temperature, A, b))
             comm.send(dirichlet, dest=1)
         # print("\n", "#" * 40, f" {rank} ", "#" * 40, "\n", temperature, "\n", "#" * 88)
         comm.send(temps, 3)
 
     if rank == 3:
-        t1 = comm.recv(source=0)
-        t2 = comm.recv(source=1)
-        t3 = comm.recv(source=2)
+        o1 = comm.recv(source=0)
+        o2 = comm.recv(source=1)
+        o3 = comm.recv(source=2)
 
         np.set_printoptions(precision=1)
+        for i in range(3):
+            print("\n", "=" * 38, f" {i + 1} ", "=" * 38)
+            t1, A1, b1 = o1[-i - 1]
+            t2, A2, b2 = o1[-i - 1]
+            t3, A3, b3 = o1[-i - 1]
+
+            print(f"Ω1:\n{A1.toarray()}")
+            print(f"Ω2:\n{A2.toarray()}")
+            print(f"Ω3:\n{A3.toarray()}")
+        
+        
+        np.set_printoptions(precision=1)
         print("\n", "=" * 38, " Ω1 ", "=" * 38)
-        print(t1[-1])
+        print(o1[-1][0])
         print("\n", "=" * 38, " Ω2 ", "=" * 38)
-        print(t2[-1])
+        print(o2[-1][0])
         print("\n", "=" * 38, " Ω3 ", "=" * 38)
-        print(t3[-1])
-        plot_temp([t1[-1], t2[-1], t3[-1]])
+        print(o3[-1][0])
+        plot_temp_rooms([[o1[-1][0], o2[-1][0], o3[-1][0]]])
