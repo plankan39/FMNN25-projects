@@ -10,7 +10,7 @@ W = 0.8
 ITERATIONS = 10
 
 # Describing room 1
-X_N_1 = 4
+X_N_1 = 21
 Y_N_1 = X_N_1
 # Describing room 2
 X_N_2 = X_N_1
@@ -68,12 +68,14 @@ if __name__ == "__main__":
 
     if rank == 0:
         omega = omega1()
-        for _ in range(ITERATIONS):
+        for i in range(ITERATIONS):
             neumann: Boundary = comm.recv(source=1)
             omega.right.values[omega.right.dirichlet == 0] = neumann.values[
                 neumann.dirichlet == 0
             ]
             temperature, *_ = omega.solveNeumann()
+            if i != 0:
+                temperature = W * temperature + (1-W) * temps[-1]
             temps.append(temperature)
 
             dirichlet = Boundary(temperature[:, -1], omega.right.dirichlet)
@@ -99,10 +101,14 @@ if __name__ == "__main__":
             omega.right.values[omega.right.dirichlet == 0] = dirichlet_right.values[
                 dirichlet_right.dirichlet == 0
             ]
+
+            if i != 0:
+                temperature = W * temperature + (1-W) * temps[-1]
+            
             temps.append(temperature)
         comm.send(temps, 3)
     if rank == 2:
-        for _ in range(ITERATIONS):
+        for i in range(ITERATIONS):
             omega = omega3()
             neumann: Boundary = comm.recv(source=1)
             omega.left.values[omega.left.dirichlet == 0] = neumann.values[
@@ -111,6 +117,8 @@ if __name__ == "__main__":
             temperature, *_ = omega.solveNeumann()
 
             dirichlet = Boundary(temperature[:, 0], omega.left.dirichlet)
+            if i != 0:
+                temperature = W * temperature + (1-W) * temps[-1]
             temps.append(temperature)
             comm.send(dirichlet, dest=1)
         # print("\n", "#" * 40, f" {rank} ", "#" * 40, "\n", temperature, "\n", "#" * 88)
