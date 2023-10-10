@@ -8,7 +8,7 @@ WALL = 15
 HEATER = 40
 WINDOW = 5
 W = 0.8
-ITERATIONS = 1
+ITERATIONS = 10
 
 # Describing room 1
 X_N_1 = 4
@@ -66,7 +66,6 @@ if __name__ == "__main__":
 
     rank = comm.Get_rank()
 
-    
     if rank == 0:
         omega = omega1()
         for _ in range(ITERATIONS):
@@ -82,8 +81,11 @@ if __name__ == "__main__":
 
     if rank == 1:
         omega = omega2()
-        for _ in range(ITERATIONS):
+        for i in range(ITERATIONS):
             temperature, *_ = omega.solveDirichlet()
+
+            print(f"i:\n{temperature}\n{omega.left}\n{omega.right}")
+
             left, _, right, _ = omega.neumannValues(temperature, H)
 
             comm.send(left, dest=0)
@@ -92,8 +94,12 @@ if __name__ == "__main__":
             dirichlet_left: Boundary = comm.recv(source=0)
             dirichlet_right: Boundary = comm.recv(source=2)
 
-            omega.left.values = dirichlet_left.values
-            omega.right.values = dirichlet_right.values
+            omega.left.values[omega.left.dirichlet == 0] = dirichlet_left.values[
+                dirichlet_left.dirichlet == 0
+            ]
+            omega.right.values[omega.right.dirichlet == 0]= dirichlet_right.values[
+                dirichlet_right.dirichlet == 0
+            ]
         print("\n", "#" * 40, f" {rank} ", "#" * 40, "\n", temperature, "\n", "#" * 88)
     if rank == 2:
         for _ in range(ITERATIONS):
