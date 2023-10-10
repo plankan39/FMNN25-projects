@@ -8,7 +8,7 @@ WALL = 15
 HEATER = 40
 WINDOW = 5
 W = 0.8
-ITERATIONS = 10
+ITERATIONS = 1
 
 # Describing room 1
 X_N_1 = 4
@@ -65,44 +65,45 @@ if __name__ == "__main__":
     comm = MPI.Comm.Clone(MPI.COMM_WORLD)
 
     rank = comm.Get_rank()
+
+    
     if rank == 0:
         omega = omega1()
-        neumann: Boundary = comm.recv(source=1)
-        omega.right.values[omega.right.dirichlet == 0] = neumann.values[
-            neumann.dirichlet == 0
-        ]
-        temperature, *_ = omega.solveNeumann()
+        for _ in range(ITERATIONS):
+            neumann: Boundary = comm.recv(source=1)
+            omega.right.values[omega.right.dirichlet == 0] = neumann.values[
+                neumann.dirichlet == 0
+            ]
+            temperature, *_ = omega.solveNeumann()
 
-        dirichlet = Boundary(temperature[:, -1], omega.right.dirichlet)
-        comm.send(dirichlet, dest=1)
+            dirichlet = Boundary(temperature[:, -1], omega.right.dirichlet)
+            comm.send(dirichlet, dest=1)
+        print("\n", "#" * 40, f" {rank} ", "#" * 40, "\n", temperature, "\n", "#" * 88)
 
     if rank == 1:
         omega = omega2()
-        temperature, *_ = omega.solveDirichlet()
-        left, _, right, _ = omega.neumannValues(temperature, H)
+        for _ in range(ITERATIONS):
+            temperature, *_ = omega.solveDirichlet()
+            left, _, right, _ = omega.neumannValues(temperature, H)
 
-        comm.send(left, dest=0)
-        comm.send(right, dest=2)
+            comm.send(left, dest=0)
+            comm.send(right, dest=2)
 
-        dirichlet_left: Boundary = comm.recv(source=0)
-        dirichlet_right: Boundary = comm.recv(source=2)
+            dirichlet_left: Boundary = comm.recv(source=0)
+            dirichlet_right: Boundary = comm.recv(source=2)
 
-        omega.left.values = dirichlet_left.values
-        omega.right.values = dirichlet_right.values
+            omega.left.values = dirichlet_left.values
+            omega.right.values = dirichlet_right.values
+        print("\n", "#" * 40, f" {rank} ", "#" * 40, "\n", temperature, "\n", "#" * 88)
     if rank == 2:
-        omega = omega3()
-        neumann: Boundary = comm.recv(source=1)
-        omega.left.values[omega.left.dirichlet == 0] = neumann.values[
-            neumann.dirichlet == 0
-        ]
-        temperature, *_ = omega.solveNeumann()
+        for _ in range(ITERATIONS):
+            omega = omega3()
+            neumann: Boundary = comm.recv(source=1)
+            omega.left.values[omega.left.dirichlet == 0] = neumann.values[
+                neumann.dirichlet == 0
+            ]
+            temperature, *_ = omega.solveNeumann()
 
-        dirichlet = Boundary(temperature[:, 0], omega.left.dirichlet)
-        comm.send(dirichlet, dest=1)
-
-    if rank == 3:
-        comm.recv(source=0)
-        comm.recv(source=1)
-        comm.recv(source=2)
-
-    print("\n", "#" * 40, f" {rank} ", "#" * 40, "\n", temperature, "\n", "#" * 88)
+            dirichlet = Boundary(temperature[:, 0], omega.left.dirichlet)
+            comm.send(dirichlet, dest=1)
+        print("\n", "#" * 40, f" {rank} ", "#" * 40, "\n", temperature, "\n", "#" * 88)
