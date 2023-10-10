@@ -1,7 +1,6 @@
 from mpi4py import MPI
 import numpy as np
-from room import Room, Boundary
-
+from room import Room, Boundary, plot_temp
 
 # Tunable parameters
 WALL = 15
@@ -65,6 +64,7 @@ if __name__ == "__main__":
     comm = MPI.Comm.Clone(MPI.COMM_WORLD)
 
     rank = comm.Get_rank()
+    temps = []
 
     if rank == 0:
         omega = omega1()
@@ -74,17 +74,16 @@ if __name__ == "__main__":
                 neumann.dirichlet == 0
             ]
             temperature, *_ = omega.solveNeumann()
+            temps.append(temperature)
 
             dirichlet = Boundary(temperature[:, -1], omega.right.dirichlet)
             comm.send(dirichlet, dest=1)
-        print("\n", "#" * 40, f" {rank} ", "#" * 40, "\n", temperature, "\n", "#" * 88)
+        comm.send(temps, 3)
 
     if rank == 1:
         omega = omega2()
         for i in range(ITERATIONS):
             temperature, *_ = omega.solveDirichlet()
-
-            print(f"i:\n{temperature}\n{omega.left}\n{omega.right}")
 
             left, _, right, _ = omega.neumannValues(temperature, H)
 
@@ -97,10 +96,11 @@ if __name__ == "__main__":
             omega.left.values[omega.left.dirichlet == 0] = dirichlet_left.values[
                 dirichlet_left.dirichlet == 0
             ]
-            omega.right.values[omega.right.dirichlet == 0]= dirichlet_right.values[
+            omega.right.values[omega.right.dirichlet == 0] = dirichlet_right.values[
                 dirichlet_right.dirichlet == 0
             ]
-        print("\n", "#" * 40, f" {rank} ", "#" * 40, "\n", temperature, "\n", "#" * 88)
+            temps.append(temperature)
+        comm.send(temps, 3)
     if rank == 2:
         for _ in range(ITERATIONS):
             omega = omega3()
@@ -111,5 +111,21 @@ if __name__ == "__main__":
             temperature, *_ = omega.solveNeumann()
 
             dirichlet = Boundary(temperature[:, 0], omega.left.dirichlet)
+            temps.append(temperature)
             comm.send(dirichlet, dest=1)
-        print("\n", "#" * 40, f" {rank} ", "#" * 40, "\n", temperature, "\n", "#" * 88)
+        # print("\n", "#" * 40, f" {rank} ", "#" * 40, "\n", temperature, "\n", "#" * 88)
+        comm.send(temps, 3)
+
+    if rank == 3:
+        t1 = comm.recv(source=0)
+        t2 = comm.recv(source=1)
+        t3 = comm.recv(source=2)
+
+        np.set_printoptions(precision=1)
+        print("\n", "=" * 38, " Ω1 ", "=" * 38)
+        print(t1[-1])
+        print("\n", "=" * 38, " Ω2 ", "=" * 38)
+        print(t2[-1])
+        print("\n", "=" * 38, " Ω3 ", "=" * 38)
+        print(t3[-1])
+        plot_temp([t1[-1], t2[-1], t3[-1]])
