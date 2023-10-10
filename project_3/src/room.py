@@ -3,10 +3,17 @@ import numpy as np
 from scipy.sparse import diags, linalg
 import matplotlib.pyplot as plt
 from pprint import pprint
+from config import *
 
 
 @dataclass
 class Boundary:
+    """Describes a boundary of a room.
+    Args:
+        values (np.ndarray): The values along the border
+        dirichlet (np.ndarray): Mask indicating dirichlet or Neumann condition
+    """
+
     values: np.ndarray
     dirichlet: np.ndarray
 
@@ -22,6 +29,16 @@ class Boundary:
 
 @dataclass
 class Room:
+    """
+    Describes a room.
+
+    Args:
+        left (Boundary): The left boundry
+        top (Boundary): The top boundry
+        right (Boundary): The right boundry
+        bottom (Boundary): The bottom boundry
+    """
+
     left: Boundary
     top: Boundary
     right: Boundary
@@ -29,17 +46,29 @@ class Room:
 
     @property
     def xN(self):
+        """Number of points along the x-axis"""
         return self.top.values.shape[0]
 
     @property
     def yN(self):
+        """Number of points along the y-axis"""
         return self.left.values.shape[0]
 
     @property
     def N(self):
+        """Total number of points in the room"""
         return self.xN * self.yN
 
     def neumannValues(self, temperature: np.ndarray, h):
+        """Calculate neumann values for all boundries
+
+        Args:
+            temperature (np.ndarray): Temperature matrix
+            h (float): stepsize
+
+        Returns:
+            (left, top, right, bottom) neumann values
+        """
         left = Boundary(np.zeros(len(self.left)), self.left.dirichlet)
         right = Boundary(np.zeros(len(self.right)), self.right.dirichlet)
         for i, (l, r) in enumerate(zip(self.left.dirichlet, self.right.dirichlet)):
@@ -78,20 +107,28 @@ class Room:
         return left, top, right, bottom
 
     def _getSystem(self, format="csc"):
+        """Generate dirchlet system
+
+        Args:
+            format (str, optional): sparse array format. Defaults to "csc".
+
+        Returns:
+            A, b: Matrix and boundry array
+        """
         d0 = np.ones(self.N)
         d1 = np.zeros(self.N - 1)
         d2 = np.zeros(self.N - self.yN)
 
         for i in range(1, self.xN - 1):
-            d0[i * self.yN + 1: (i + 1) * self.yN - 1] = -4
-            d1[i * self.yN + 1: (i + 1) * self.yN - 1] = 1
-            d2[i * self.yN + 1: (i + 1) * self.yN - 1] = 1
+            d0[i * self.yN + 1 : (i + 1) * self.yN - 1] = -4
+            d1[i * self.yN + 1 : (i + 1) * self.yN - 1] = 1
+            d2[i * self.yN + 1 : (i + 1) * self.yN - 1] = 1
 
         b = np.zeros(self.N)
         b[: self.yN] = self.left.values
-        b[-self.yN:] = self.right.values
+        b[-self.yN :] = self.right.values
         b[:: self.yN] = self.bottom.values
-        b[self.yN - 1:: self.yN] = self.top.values
+        b[self.yN - 1 :: self.yN] = self.top.values
 
         A = diags(
             [np.flip(d2), np.flip(d1), d0, d1, d2],
@@ -102,6 +139,11 @@ class Room:
         return A, b
 
     def solveNeumann(self):
+        """Solve Neumann system. Assumes the neumann values are put in the boundry
+
+        Returns:
+            T, A, b: solution and the system
+        """
         A, b = self._getSystem("lil")
         for i in range(self.yN):
             l_idx = i
@@ -123,11 +165,17 @@ class Room:
         return linalg.spsolve(A.tocsc(), b).reshape(self.yN, self.xN, order="F"), A, b
 
     def solveDirichlet(self):
+        """Solve Dirichlet system
+
+        Returns:
+            T, A, b: solution and the system
+        """
         A, b = self._getSystem()
         return linalg.spsolve(A, b).reshape(self.yN, self.xN, order="F"), A, b
 
 
 def plot_temp(temps):
+    """Plot temperature matrices"""
     for i, temp in enumerate(temps):
         plt.figure(i)
         y_N, x_N = temp.shape
@@ -135,104 +183,28 @@ def plot_temp(temps):
             np.linspace(0, 1, x_N), np.linspace(0, 1.0 * (y_N) / (x_N), y_N)
         )
         plt.title("Temperature in the room")
-        plt.contourf(X, Y, temp, levels=500,
-                     cmap=plt.cm.coolwarm, vmin=5, vmax=40)
+        plt.contourf(X, Y, temp, levels=500, cmap=plt.cm.coolwarm, vmin=5, vmax=40)
         plt.colorbar()
 
     plt.show()
 
 
 def plot_temp_rooms(temps):
+    """Plot all rooms in one plot"""
     for i, T in enumerate(temps):
         t1, t2, t3 = T
         plt.figure(i)
         xn = t1.shape[1]
         yn = t1.shape[0]
-        # print(t1.shape)
-        # print(t2.shape)
-        # print(t3.shape)
-        # print(xn, yn)
-        t = np.zeros((2*xn, 3*yn))
+        t = np.zeros((2 * xn, 3 * yn))
         t[0:xn, 0:yn] = t1
-        # t = t1
-        t[0:2*xn, yn:2*yn] = t2
-        t[xn:2*xn, 2*yn:3*yn] = t3
-        t = t[1:-1, 1:-1]
+        t[0 : 2 * xn, yn : 2 * yn] = t2
+        t[xn : 2 * xn, 2 * yn : 3 * yn] = t3
         X, Y = np.meshgrid(
             np.linspace(0, 1, t.shape[1]), np.linspace(0, 1.0, t.shape[0])
         )
-        print(X.shape)
-        print(t.shape)
         plt.title("Temperature in the room")
-        plt.contourf(X, Y, t, levels=500,
-                     cmap=plt.cm.coolwarm, vmin=5, vmax=40)
+        plt.contourf(X, Y, t, levels=500, cmap=plt.cm.coolwarm, vmin=5, vmax=40)
         plt.colorbar()
 
     plt.show()
-
-
-# if __name__ == "__main__":
-#     ##################################### Omega 1 #####################################
-#     lb1 = Boundary(HEATER * np.ones(Y_N_1), np.ones(Y_N_1))
-#     tb1 = Boundary(WALL * np.ones(X_N_1), np.ones(X_N_1))
-#     bb1 = Boundary(WALL * np.ones(X_N_1), np.ones(X_N_1))
-#     gamma1 = Boundary(WALL * np.ones(Y_N_1), np.array([1] + [0] * (Y_N_1 - 2) + [1]))
-#     omega1 = Room(lb1, tb1, gamma1, bb1)
-
-#     ##################################### Omega 3 #####################################
-#     gamma2 = Boundary(WALL * np.ones(Y_N_3), np.array([1] + [0] * (Y_N_3 - 2) + [1]))
-#     tb3 = Boundary(WALL * np.ones(X_N_3), np.ones(X_N_3))
-#     rb3 = Boundary(HEATER * np.ones(Y_N_3), np.ones(Y_N_3))
-#     bb3 = Boundary(WALL * np.ones(X_N_3), np.ones(X_N_3))
-#     omega3 = Room(gamma2, tb3, rb3, bb3)
-
-#     ##################################### Omega 2 #####################################
-#     lb2 = gamma1 + Boundary(
-#         WALL * np.ones(Y_N_2 - gamma1.values.shape[0]),
-#         np.ones(Y_N_2 - gamma1.values.shape[0]),
-#     )
-#     tb2 = Boundary(HEATER * np.ones(X_N_2), np.ones(X_N_2))
-#     rb2 = (
-#         Boundary(WALL * np.ones(Y_N_2 - len(gamma2)), np.ones(Y_N_2 - len(gamma2)))
-#         + gamma2
-#     )
-#     bb2 = Boundary(WINDOW * np.ones(X_N_2), np.ones(X_N_2))
-#     omega2 = Room(lb2, tb2, rb2, bb2)
-
-#     ########################### Dirchlet Neumann iterations ###########################
-#     t1s = []
-#     t2s = []
-#     t3s = []
-#     for i in range(ITERATIONS):
-#         t2, *_ = omega2.solveDirichlet()
-#         left, _, right, _ = omega2.neumannValues(t2, H)
-
-#         idx12 = omega1.right.dirichlet == 0
-#         idx21 = omega2.left.dirichlet == 0
-#         idx23 = omega2.right.dirichlet == 0
-#         idx32 = omega3.left.dirichlet == 0
-
-#         omega1.right.values[idx12] = left.values[idx21]
-#         t1, *_ = omega1.solveNeumann()
-#         omega2.left.values[idx21] = t1[idx12, -1]
-
-#         omega3.left.values[idx32] = right.values[idx23]
-#         t3, *_ = omega3.solveNeumann()
-#         omega2.right.values[idx23] = t3[idx32, 0]
-
-#         if i != 0:
-#             t1 = W * t1 + (1 - W) * t1s[-1]
-#             t2 = W * t2 + (1 - W) * t2s[-1]
-#             t3 = W * t3 + (1 - W) * t3s[-1]
-#         t1s.append(t1)
-#         t2s.append(t2)
-#         t3s.append(t3)
-
-#     np.set_printoptions(precision=0)
-#     print("\n", "=" * 38, " Ω1 ", "=" * 38)
-#     print(t1)
-#     print("\n", "=" * 38, " Ω2 ", "=" * 38)
-#     print(t2)
-#     print("\n", "=" * 38, " Ω3 ", "=" * 38)
-#     print(t3)
-#     # plot_temp([t1, t2, t3])

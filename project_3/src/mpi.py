@@ -1,63 +1,9 @@
 from mpi4py import MPI
 import numpy as np
-from room import Room, Boundary, plot_temp_rooms
+from config import ITERATIONS, H, W, omega1, omega2, omega3
+from room import Boundary, plot_temp_rooms
 
-# Tunable parameters
-WALL = 15
-HEATER = 40
-WINDOW = 5
-W = 0.8
-ITERATIONS = 10
-
-# Describing room 1
-X_N_1 = 4
-Y_N_1 = X_N_1
-# Describing room 2
-X_N_2 = X_N_1
-Y_N_2 = 2 * X_N_2
-# Describing room 3
-X_N_3 = X_N_1
-Y_N_3 = Y_N_1
-
-# The
-H = 1 / (X_N_1 - 1)
-
-
-def gamma1():
-    return Boundary(WALL * np.ones(Y_N_1), np.array([1] + [0] * (Y_N_1 - 2) + [1]))
-
-
-def gamma2():
-    return Boundary(WALL * np.ones(Y_N_3), np.array([1] + [0] * (Y_N_3 - 2) + [1]))
-
-
-def o1() -> Room:
-    lb1 = Boundary(HEATER * np.ones(Y_N_1), np.ones(Y_N_1))
-    tb1 = Boundary(WALL * np.ones(X_N_1), np.ones(X_N_1))
-    rb1 = gamma1()
-    bb1 = Boundary(WALL * np.ones(X_N_1), np.ones(X_N_1))
-    return Room(lb1, tb1, rb1, bb1)
-
-
-def omega2() -> Room:
-    g1 = gamma1()
-    g2 = gamma2()
-    lb2 = g1 + Boundary(
-        WALL * np.ones(Y_N_2 - g1.values.shape[0]),
-        np.ones(Y_N_2 - g1.values.shape[0]),
-    )
-    tb2 = Boundary(HEATER * np.ones(X_N_2), np.ones(X_N_2))
-    rb2 = Boundary(WALL * np.ones(Y_N_2 - len(g2)), np.ones(Y_N_2 - len(g2))) + g2
-    bb2 = Boundary(WINDOW * np.ones(X_N_2), np.ones(X_N_2))
-    return Room(lb2, tb2, rb2, bb2)
-
-
-def omega3() -> Room:
-    lb3 = gamma2()
-    tb3 = Boundary(WALL * np.ones(X_N_3), np.ones(X_N_3))
-    rb3 = Boundary(HEATER * np.ones(Y_N_3), np.ones(Y_N_3))
-    bb3 = Boundary(WALL * np.ones(X_N_3), np.ones(X_N_3))
-    return Room(lb3, tb3, rb3, bb3)
+# from config import *
 
 
 if __name__ == "__main__":
@@ -67,25 +13,27 @@ if __name__ == "__main__":
     temps = []
 
     if rank == 0:
-        omega = o1()
+        """Omega 1"""
+        omega = omega1()
         for i in range(ITERATIONS):
             neumann: Boundary = comm.recv(source=1)
             omega.right.values[omega.right.dirichlet == 0] = neumann.values[
                 neumann.dirichlet == 0
             ]
-            temperature, A, b = omega.solveNeumann()
+            temperature, A1, b = omega.solveNeumann()
             if i != 0:
-                temperature = W * temperature + (1-W) * temps[-1][0]
-            temps.append((temperature, A, b))
+                temperature = W * temperature + (1 - W) * temps[-1][0]
+            temps.append((temperature, A1, b))
 
             dirichlet = Boundary(temperature[:, -1], omega.right.dirichlet)
             comm.send(dirichlet, dest=1)
         comm.send(temps, 3)
 
     if rank == 1:
+        """Omega 2"""
         omega = omega2()
         for i in range(ITERATIONS):
-            temperature, A, b = omega.solveDirichlet()
+            temperature, A2, b = omega.solveDirichlet()
 
             left, _, right, _ = omega.neumannValues(temperature, H)
 
@@ -103,45 +51,44 @@ if __name__ == "__main__":
             ]
 
             if i != 0:
-                temperature = W * temperature + (1-W) * temps[-1][0]
-            
-            temps.append((temperature, A, b))
+                temperature = W * temperature + (1 - W) * temps[-1][0]
+
+            temps.append((temperature, A2, b))
         comm.send(temps, 3)
     if rank == 2:
+        """Omega 3"""
         for i in range(ITERATIONS):
             omega = omega3()
             neumann: Boundary = comm.recv(source=1)
             omega.left.values[omega.left.dirichlet == 0] = neumann.values[
                 neumann.dirichlet == 0
             ]
-            temperature, A, b = omega.solveNeumann()
+            temperature, A3, b = omega.solveNeumann()
 
             dirichlet = Boundary(temperature[:, 0], omega.left.dirichlet)
             if i != 0:
-                temperature = W * temperature + (1-W) * temps[-1][0]
-            temps.append((temperature, A, b))
+                temperature = W * temperature + (1 - W) * temps[-1][0]
+            temps.append((temperature, A3, b))
             comm.send(dirichlet, dest=1)
-        # print("\n", "#" * 40, f" {rank} ", "#" * 40, "\n", temperature, "\n", "#" * 88)
         comm.send(temps, 3)
 
     if rank == 3:
+        """Presents the result"""
         o1 = comm.recv(source=0)
         o2 = comm.recv(source=1)
         o3 = comm.recv(source=2)
 
-        np.set_printoptions(precision=1)
+        np.set_printoptions(precision=1, threshold=10000, linewidth=200)
         for i in range(3):
             print("\n", "=" * 38, f" {i + 1} ", "=" * 38)
             t1, A1, b1 = o1[-i - 1]
-            t2, A2, b2 = o1[-i - 1]
-            t3, A3, b3 = o1[-i - 1]
+            t2, A2, b2 = o2[-i - 1]
+            t3, A3, b3 = o3[-i - 1]
 
             print(f"Ω1:\n{A1.toarray()}")
             print(f"Ω2:\n{A2.toarray()}")
             print(f"Ω3:\n{A3.toarray()}")
-        
-        
-        np.set_printoptions(precision=1)
+
         print("\n", "=" * 38, " Ω1 ", "=" * 38)
         print(o1[-1][0])
         print("\n", "=" * 38, " Ω2 ", "=" * 38)
