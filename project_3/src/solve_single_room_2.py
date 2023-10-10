@@ -163,7 +163,7 @@ if __name__ == "__main__":
     window = 5
 
     # Omega 1
-    x_N_13 = 10
+    x_N_13 = 50
     y_N_13 = x_N_13
     x_N_2 = x_N_13
     y_N_2 = 2 * x_N_2

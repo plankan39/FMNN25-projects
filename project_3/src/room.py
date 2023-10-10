@@ -146,15 +146,23 @@ def plot_temp_rooms(temps):
     for i, T in enumerate(temps):
         t1, t2, t3 = T
         plt.figure(i)
-        xn = 3*t2.shape[0]
-        yn = t2.shape[1]
-        t = np.zeros((xn, yn))
-        t[0:xn, 0:yn//2] = t1
-        t[xn:2*xn+1, 0:yn] = t2
-        t[2*xn:2*xn+1, yn//2:yn] = t3
+        xn = t1.shape[1]
+        yn = t1.shape[0]
+        # print(t1.shape)
+        # print(t2.shape)
+        # print(t3.shape)
+        # print(xn, yn)
+        t = np.zeros((2*xn, 3*yn))
+        t[0:xn, 0:yn] = t1
+        # t = t1
+        t[0:2*xn, yn:2*yn] = t2
+        t[xn:2*xn, 2*yn:3*yn] = t3
+        t = t[1:-1, 1:-1]
         X, Y = np.meshgrid(
-            np.linspace(0, 1, x_N), np.linspace(0, 1.0 * (yn) / (xn), yn)
+            np.linspace(0, 1, t.shape[1]), np.linspace(0, 1.0, t.shape[0])
         )
+        print(X.shape)
+        print(t.shape)
         plt.title("Temperature in the room")
         plt.contourf(X, Y, t, levels=500,
                      cmap=plt.cm.coolwarm, vmin=5, vmax=40)
