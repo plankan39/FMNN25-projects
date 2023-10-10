@@ -269,7 +269,10 @@ if __name__ == "__main__":
     print(t2)
     print("="*50)
     print(t3)
-    plot_temp([t1, t2, t3])
+    from room import plot_temp_rooms
+    T = [[t1, t2, t3]]
+    print(len(T))
+    plot_temp_rooms(T)
 
     # X, Y = np.meshgrid(
     #     np.linspace(0, 1, x_N - 2), np.linspace(0, 1.0 * (y_N - 2) / (x_N - 2), y_N - 2)

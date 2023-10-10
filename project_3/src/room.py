@@ -143,7 +143,8 @@ def plot_temp(temps):
 
 
 def plot_temp_rooms(temps):
-    for i, (t1, t2, t3) in enumerate(temps):
+    for i, T in enumerate(temps):
+        t1, t2, t3 = T
         plt.figure(i)
         xn = 3*t2.shape[0]
         yn = t2.shape[1]
