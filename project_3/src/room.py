@@ -83,15 +83,15 @@ class Room:
         d2 = np.zeros(self.N - self.yN)
 
         for i in range(1, self.xN - 1):
-            d0[i * self.yN + 1 : (i + 1) * self.yN - 1] = -4
-            d1[i * self.yN + 1 : (i + 1) * self.yN - 1] = 1
-            d2[i * self.yN + 1 : (i + 1) * self.yN - 1] = 1
+            d0[i * self.yN + 1: (i + 1) * self.yN - 1] = -4
+            d1[i * self.yN + 1: (i + 1) * self.yN - 1] = 1
+            d2[i * self.yN + 1: (i + 1) * self.yN - 1] = 1
 
         b = np.zeros(self.N)
         b[: self.yN] = self.left.values
-        b[-self.yN :] = self.right.values
+        b[-self.yN:] = self.right.values
         b[:: self.yN] = self.bottom.values
-        b[self.yN - 1 :: self.yN] = self.top.values
+        b[self.yN - 1:: self.yN] = self.top.values
 
         A = diags(
             [np.flip(d2), np.flip(d1), d0, d1, d2],
@@ -135,7 +135,28 @@ def plot_temp(temps):
             np.linspace(0, 1, x_N), np.linspace(0, 1.0 * (y_N) / (x_N), y_N)
         )
         plt.title("Temperature in the room")
-        plt.contourf(X, Y, temp, levels=500, cmap=plt.cm.coolwarm, vmin=5, vmax=40)
+        plt.contourf(X, Y, temp, levels=500,
+                     cmap=plt.cm.coolwarm, vmin=5, vmax=40)
+        plt.colorbar()
+
+    plt.show()
+
+
+def plot_temp_rooms(temps):
+    for i, (t1, t2, t3) in enumerate(temps):
+        plt.figure(i)
+        xn = 3*t2.shape[0]
+        yn = t2.shape[1]
+        t = np.zeros((xn, yn))
+        t[0:xn, 0:yn//2] = t1
+        t[xn:2*xn+1, 0:yn] = t2
+        t[2*xn:2*xn+1, yn//2:yn] = t3
+        X, Y = np.meshgrid(
+            np.linspace(0, 1, x_N), np.linspace(0, 1.0 * (yn) / (xn), yn)
+        )
+        plt.title("Temperature in the room")
+        plt.contourf(X, Y, t, levels=500,
+                     cmap=plt.cm.coolwarm, vmin=5, vmax=40)
         plt.colorbar()
 
     plt.show()
