@@ -9,7 +9,7 @@ W = 0.8
 ITERATIONS = 10
 
 # Describing room 1
-X_N_1 = 4
+X_N_1 = 101
 Y_N_1 = X_N_1
 # Describing room 2
 X_N_2 = X_N_1

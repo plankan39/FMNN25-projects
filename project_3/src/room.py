@@ -106,7 +106,7 @@ class Room:
                 )
         return left, top, right, bottom
 
-    def _getSystem(self, format="csc"):
+    def _getSystem(self, format="csr"):
         """Generate dirchlet system
 
         Args:
@@ -162,7 +162,7 @@ class Room:
 
         # TODO: implement for top and bottom
 
-        return linalg.spsolve(A.tocsc(), b).reshape(self.yN, self.xN, order="F"), A, b
+        return linalg.spsolve(A.tocsr(), b).reshape(self.yN, self.xN, order="F"), A, b
 
     def solveDirichlet(self):
         """Solve Dirichlet system
@@ -196,7 +196,7 @@ def plot_temp_rooms(temps):
         plt.figure(i)
         xn = t1.shape[1]
         yn = t1.shape[0]
-        t = np.zeros((2 * xn, 3 * yn))
+        t = np.nan*np.zeros((2 * xn, 3 * yn))
         t[0:xn, 0:yn] = t1
         t[0 : 2 * xn, yn : 2 * yn] = t2
         t[xn : 2 * xn, 2 * yn : 3 * yn] = t3
